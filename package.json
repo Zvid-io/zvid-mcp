@@ -1,0 +1,42 @@
+{
+  "name": "zvid-mcp",
+  "version": "0.1.0",
+  "description": "Official Zvid MCP server — create video/image renders, manage templates, projects, webhooks and credits from any MCP client.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "zvid-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "start:http": "node dist/http.js",
+    "test": "npm run build && node --test dist/test/client.test.js dist/test/server.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "zvid",
+    "mcp",
+    "modelcontextprotocol",
+    "video",
+    "rendering",
+    "json2video"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}
