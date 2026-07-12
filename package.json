@@ -20,7 +20,7 @@
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "start:http": "node dist/http.js",
-    "test": "npm run build && node --test dist/test/client.test.js dist/test/server.test.js",
+    "test": "npm run build && node --test dist/test/cli.test.js dist/test/client.test.js dist/test/server.test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

@@ -19,6 +19,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ZvidApiError, ZvidClient } from "./client.js";
+import {
+  buildProjectJsonSchema,
+  buildRenderRequestJsonSchema,
+  getElementDocs,
+  getExample,
+  listElements,
+  repairProject,
+  validateProject,
+  validateRenderRequest,
+  AUTHORING_GUIDELINES,
+  DEFAULT_LIMITS,
+  EXAMPLES,
+  FREE_PLAN_LIMITS,
+  SCHEMA_VERSION,
+  SOURCE_OF_TRUTH,
+  VALIDATION_NOTES,
+} from "./zvidSchema.js";
 
 export interface ServerOptions {
   client: ZvidClient;
@@ -64,7 +81,7 @@ function handler<A>(fn: (args: A) => Promise<unknown>) {
 const payloadSchema = z
   .record(z.unknown())
   .describe(
-    "Full Zvid project JSON (scenes, elements, output settings). See https://zvid.io/docs for the project schema."
+    "Full Zvid project JSON (scenes, elements, output settings). Call get_project_schema for the JSON Schema, list_supported_elements / get_element_docs for element docs, and validate_project_json BEFORE rendering."
   );
 
 const templateIdSchema = z
@@ -178,6 +195,184 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       },
     },
     handler((args) => client.get("/api/jobs", args))
+  );
+
+  // ---- schema & authoring -------------------------------------------------------
+  // Backed by the shared zvid-schema module (vendored zvidSchema.ts), which is
+  // derived from the LIVE backend validation (orch/middleware/validation.js).
+  // Backend wins over public docs when they disagree.
+
+  server.registerTool(
+    "get_project_schema",
+    {
+      title: "Get project JSON Schema",
+      description:
+        "Get the JSON Schema (draft 2020-12) for a Zvid render payload — element types, required fields, enums, defaults, min/max bounds and URL restrictions — plus notes for cross-field rules the schema cannot express (timing checks, plan limits, sanitizer rules). Use target: \"render-request\" for the full request envelope (payload XOR template + variables/overrides/webhookUrl). Derived from the backend validation code, which always wins over docs.",
+      inputSchema: {
+        target: z
+          .enum(["project", "render-request"])
+          .optional()
+          .describe('What to describe: "project" (the payload object, default) or "render-request" (the full POST body)'),
+      },
+    },
+    handler(async ({ target }) => {
+      const jsonSchema =
+        target === "render-request"
+          ? buildRenderRequestJsonSchema()
+          : buildProjectJsonSchema();
+      return {
+        schemaVersion: SCHEMA_VERSION,
+        sourceOfTruth: SOURCE_OF_TRUTH,
+        jsonSchema,
+        validationNotes: VALIDATION_NOTES,
+        authoringGuidelines: AUTHORING_GUIDELINES,
+        planLimits: {
+          note: "Numeric ceilings are plan-dependent; the schema uses the Default tier. Free-tier ceilings shown for reference. On 400 the API echoes your effective limits in planLimits.",
+          defaultTier: DEFAULT_LIMITS,
+          freeTier: FREE_PLAN_LIMITS,
+        },
+      };
+    })
+  );
+
+  server.registerTool(
+    "validate_project_json",
+    {
+      title: "Validate project JSON",
+      description:
+        "Validate a Zvid project payload BEFORE rendering (free, no credits). Returns { valid, errors: [{field, message}], warnings }. Warnings include LAYOUT LINT — overlapping texts, x/y ignored by position presets, boxes extending off-canvas, padding that will get cut off, low text contrast — treat every layout warning as a fix-before-render item. Local validation mirrors the backend rules; set remote: true to ALSO run the payload through the live API validator (POST /api/render/validate/api-key — resolves templates and applies your plan's real limits).",
+      inputSchema: {
+        payload: z.record(z.unknown()).describe("The project JSON to validate (the `payload` you would pass to create_render)"),
+        kind: z
+          .enum(["project", "render-request"])
+          .optional()
+          .describe('Validate as a bare "project" payload (default) or as a full "render-request" body'),
+        remote: z
+          .boolean()
+          .optional()
+          .describe("Also validate server-side against your account's actual plan limits (default false)"),
+      },
+    },
+    handler(async ({ payload, kind, remote }) => {
+      const local =
+        kind === "render-request"
+          ? validateRenderRequest(payload)
+          : validateProject(payload);
+
+      const result: Record<string, unknown> = {
+        valid: local.valid,
+        errors: local.errors,
+        warnings: local.warnings,
+        validatedBy: "local schema (mirrors backend validation)",
+      };
+
+      if (remote) {
+        const body = kind === "render-request" ? payload : { payload };
+        try {
+          const remoteRes = await client.post("/api/render/validate/api-key", body);
+          result.remote = { valid: true, response: remoteRes };
+        } catch (err) {
+          if (err instanceof ZvidApiError && err.status === 400) {
+            result.remote = { valid: false, errors: err.details ?? err.message };
+            result.valid = false;
+          } else if (err instanceof ZvidApiError && err.status === 404) {
+            result.remote = {
+              valid: null,
+              note: "The API does not expose POST /api/render/validate yet — local verdict returned.",
+            };
+          } else {
+            throw err;
+          }
+        }
+      }
+      return result;
+    })
+  );
+
+  server.registerTool(
+    "list_supported_elements",
+    {
+      title: "List supported elements",
+      description:
+        "List every element type a Zvid project supports (visuals: IMAGE, VIDEO, GIF, SVG, TEXT; plus AUDIO items, SUBTITLE and SCENE) with a summary and required fields. Use get_element_docs for full per-type docs and examples.",
+      inputSchema: {},
+    },
+    handler(async () => ({
+      schemaVersion: SCHEMA_VERSION,
+      elements: listElements(),
+      notes: [
+        'Visual elements live in `visuals` (project-level or per-scene); the discriminator is `type` (case-insensitive).',
+        "AUDIO items live in `audios`, SUBTITLE in the top-level `subtitle` object, SCENEs in `scenes`.",
+        'Image projects (type: "image") only allow IMAGE, TEXT and SVG visuals.',
+      ],
+      authoringGuidelines: AUTHORING_GUIDELINES,
+    }))
+  );
+
+  server.registerTool(
+    "get_element_docs",
+    {
+      title: "Get element docs",
+      description:
+        "Get concise docs for one element type — required fields, every supported field with constraints, gotchas, and a valid example. Types: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE (case-insensitive).",
+      inputSchema: {
+        element: z
+          .string()
+          .describe('Element type, e.g. "TEXT", "IMAGE", "VIDEO", "GIF", "SVG", "AUDIO", "SUBTITLE", "SCENE"'),
+      },
+    },
+    handler(async ({ element }) => {
+      const doc = getElementDocs(element);
+      if (!doc) {
+        throw new Error(
+          `Unknown element type "${element}". Supported: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE.`
+        );
+      }
+      return doc;
+    })
+  );
+
+  server.registerTool(
+    "get_example_payload",
+    {
+      title: "Get example payload",
+      description:
+        "Get a validated, layout-clean example for a common flow: promo-video (10s scene-based hook/value/CTA with scrim + flex-centered card), template-render (variables), still-image (transparent PNG, single html card), subtitles (karaoke captions), webhook-flow (per-job webhookUrl). These encode the authoring guidelines — start from one instead of composing from scratch. Omit `name` to list all examples.",
+      inputSchema: {
+        name: z
+          .enum(["promo-video", "template-render", "still-image", "subtitles", "webhook-flow"])
+          .optional()
+          .describe("Example name; omit to get every example"),
+      },
+    },
+    handler(async ({ name }) => {
+      if (!name) return EXAMPLES;
+      const example = getExample(name);
+      if (!example) throw new Error(`Unknown example "${name}"`);
+      return example;
+    })
+  );
+
+  server.registerTool(
+    "repair_project_json",
+    {
+      title: "Repair project JSON",
+      description:
+        "Attempt conservative auto-fixes on an invalid project payload (wrong-case type, clamped numbers, format conflicts like transparent+jpg, swapped begin/end timings, unknown fields, empty/impossible elements) and explain every change. Returns the repaired payload plus its validation result — problems that need real input (e.g. missing media URLs) are left as errors.",
+      inputSchema: {
+        payload: z.record(z.unknown()).describe("The (possibly invalid) project JSON to repair"),
+      },
+    },
+    handler(async ({ payload }) => {
+      const { repaired, changes, result } = repairProject(payload);
+      return {
+        repaired,
+        changes,
+        valid: result.valid,
+        remainingErrors: result.errors,
+        warnings: result.warnings,
+      };
+    })
   );
 
   // ---- bulk renders -----------------------------------------------------------

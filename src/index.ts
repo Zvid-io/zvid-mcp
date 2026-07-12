@@ -2,13 +2,14 @@
 /**
  * zvid-mcp entry point: stdio transport.
  *
- * Env:
- *   ZVID_API_KEY  (required)  API key from the Zvid dashboard (zvid_...)
- *   ZVID_API_URL  (optional)  Orchestrator base URL, default https://api.zvid.io
+ * Credential resolution (first match wins per field — see cli.ts):
+ *   flags (--api-key / --api-url) > env (ZVID_API_KEY / ZVID_API_URL)
+ *   > ~/.zvid-mcp.json > default https://api.zvid.io
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createRequire } from "node:module";
+import { loadConfigFile, parseCliOptions, resolveCredentials } from "./cli.js";
 import { DEFAULT_BASE_URL, ZvidClient } from "./client.js";
 import { createZvidServer } from "./server.js";
 
@@ -16,13 +17,20 @@ const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
 
 async function main() {
-  const apiKey = process.env.ZVID_API_KEY ?? "";
-  const baseUrl = process.env.ZVID_API_URL ?? DEFAULT_BASE_URL;
+  const cli = parseCliOptions(process.argv.slice(2));
+  const fileConfig = loadConfigFile();
+  const resolved = resolveCredentials(
+    cli,
+    { apiKey: process.env.ZVID_API_KEY, apiUrl: process.env.ZVID_API_URL },
+    fileConfig
+  );
+  const apiKey = resolved.apiKey;
+  const baseUrl = resolved.apiUrl ?? DEFAULT_BASE_URL;
 
   if (!apiKey) {
     // stderr only — stdout is reserved for the MCP protocol.
     console.error(
-      "zvid-mcp: ZVID_API_KEY is not set. Create an API key in the Zvid dashboard and export it before starting the server."
+      "zvid-mcp: no API key. Set the ZVID_API_KEY environment variable, pass --api-key zvid_... on the command line, or put { \"apiKey\": \"zvid_...\" } in ~/.zvid-mcp.json (create a key in the Zvid dashboard under Settings → API Keys)."
     );
     process.exit(1);
   }
