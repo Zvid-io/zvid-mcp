@@ -59,7 +59,7 @@ claude mcp add zvid --env ZVID_API_KEY=zvid_your_key_here -- node /absolute/path
 
 | Tool | Description |
 | --- | --- |
-| `get_project_schema` | JSON Schema (draft 2020-12) for a project payload or the full render request, plus validation notes AND authoring guidelines (the renderer's layout model: scenes, position/anchor semantics, flex-centered cards, contrast/scrims) |
+| `get_project_schema` | Live caller-plan-aware JSON Schema (draft 2020-12) for a project payload or full render request, plus validation notes, professional authoring guidelines, and required workflow; falls back to the bundled default schema when the endpoint is unavailable |
 | `validate_project_json` | Validate a payload before rendering — field-level errors, free. Also lints layout: overlapping texts, x/y ignored by presets, off-canvas boxes, padding cut-offs, low contrast. `remote: true` also runs the live API validator with your plan's real limits |
 | `list_supported_elements` | All element types (IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE) with required fields |
 | `get_element_docs` | Per-element docs: every field, constraints, gotchas, and a valid example |

@@ -65,6 +65,23 @@ function fail(err: unknown) {
   };
 }
 
+async function liveAuthoringOrFallback<T>(
+  load: () => Promise<T>,
+  fallback: () => T
+): Promise<T | (T & { live: false; liveError: string })> {
+  try {
+    return await load();
+  } catch (error) {
+    const local = fallback();
+    const liveError =
+      error instanceof Error ? error.message : "Live authoring API unavailable";
+    return Object.assign(local as object, { live: false, liveError }) as T & {
+      live: false;
+      liveError: string;
+    };
+  }
+}
+
 /** Wrap an async handler so Zvid API errors surface as MCP tool errors. */
 function handler<A>(fn: (args: A) => Promise<unknown>) {
   return async (args: A) => {
@@ -215,24 +232,33 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .describe('What to describe: "project" (the payload object, default) or "render-request" (the full POST body)'),
       },
     },
-    handler(async ({ target }) => {
-      const jsonSchema =
-        target === "render-request"
-          ? buildRenderRequestJsonSchema()
-          : buildProjectJsonSchema();
-      return {
-        schemaVersion: SCHEMA_VERSION,
-        sourceOfTruth: SOURCE_OF_TRUTH,
-        jsonSchema,
-        validationNotes: VALIDATION_NOTES,
-        authoringGuidelines: AUTHORING_GUIDELINES,
-        planLimits: {
-          note: "Numeric ceilings are plan-dependent; the schema uses the Default tier. Free-tier ceilings shown for reference. On 400 the API echoes your effective limits in planLimits.",
-          defaultTier: DEFAULT_LIMITS,
-          freeTier: FREE_PLAN_LIMITS,
-        },
-      };
-    })
+    handler(async ({ target }) =>
+      liveAuthoringOrFallback(
+        () =>
+          client.get("/api/render/schema/api-key", {
+            target: target ?? "project",
+          }),
+        () => {
+          const jsonSchema =
+            target === "render-request"
+              ? buildRenderRequestJsonSchema()
+              : buildProjectJsonSchema();
+          return {
+            schemaVersion: SCHEMA_VERSION,
+            sourceOfTruth: SOURCE_OF_TRUTH,
+            target: target ?? "project",
+            jsonSchema,
+            validationNotes: VALIDATION_NOTES,
+            authoringGuidelines: AUTHORING_GUIDELINES,
+            planLimits: {
+              note: "Live plan-aware schema unavailable; these are bundled default limits.",
+              defaultTier: DEFAULT_LIMITS,
+              freeTier: FREE_PLAN_LIMITS,
+            },
+          };
+        }
+      )
+    )
   );
 
   server.registerTool(
@@ -249,8 +275,8 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .describe('Validate as a bare "project" payload (default) or as a full "render-request" body'),
         remote: z
           .boolean()
-          .optional()
-          .describe("Also validate server-side against your account's actual plan limits (default false)"),
+          .default(true)
+          .describe("Also validate server-side against your account's actual plan limits (default true; set false only for offline diagnostics)"),
       },
     },
     handler(async ({ payload, kind, remote }) => {
@@ -297,16 +323,22 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         "List every element type a Zvid project supports (visuals: IMAGE, VIDEO, GIF, SVG, TEXT; plus AUDIO items, SUBTITLE and SCENE) with a summary and required fields. Use get_element_docs for full per-type docs and examples.",
       inputSchema: {},
     },
-    handler(async () => ({
-      schemaVersion: SCHEMA_VERSION,
-      elements: listElements(),
-      notes: [
-        'Visual elements live in `visuals` (project-level or per-scene); the discriminator is `type` (case-insensitive).',
-        "AUDIO items live in `audios`, SUBTITLE in the top-level `subtitle` object, SCENEs in `scenes`.",
-        'Image projects (type: "image") only allow IMAGE, TEXT and SVG visuals.',
-      ],
-      authoringGuidelines: AUTHORING_GUIDELINES,
-    }))
+    handler(async () =>
+      liveAuthoringOrFallback(
+        () => client.get("/api/render/elements/api-key"),
+        () => ({
+          schemaVersion: SCHEMA_VERSION,
+          sourceOfTruth: SOURCE_OF_TRUTH,
+          elements: listElements(),
+          notes: [
+            'Visual elements live in `visuals` (project-level or per-scene); the discriminator is `type` (case-insensitive).',
+            "AUDIO items live in `audios`, SUBTITLE in the top-level `subtitle` object, SCENEs in `scenes`.",
+            'Image projects (type: "image") only allow IMAGE, TEXT and SVG visuals.',
+          ],
+          authoringGuidelines: AUTHORING_GUIDELINES,
+        })
+      )
+    )
   );
 
   server.registerTool(
@@ -321,15 +353,27 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .describe('Element type, e.g. "TEXT", "IMAGE", "VIDEO", "GIF", "SVG", "AUDIO", "SUBTITLE", "SCENE"'),
       },
     },
-    handler(async ({ element }) => {
-      const doc = getElementDocs(element);
-      if (!doc) {
-        throw new Error(
-          `Unknown element type "${element}". Supported: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE.`
-        );
-      }
-      return doc;
-    })
+    handler(async ({ element }) =>
+      liveAuthoringOrFallback(
+        () =>
+          client.get(
+            `/api/render/elements/${encodeURIComponent(element)}/api-key`
+          ),
+        () => {
+          const doc = getElementDocs(element);
+          if (!doc) {
+            throw new Error(
+              `Unknown element type "${element}". Supported: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE.`
+            );
+          }
+          return {
+            schemaVersion: SCHEMA_VERSION,
+            sourceOfTruth: SOURCE_OF_TRUTH,
+            element: doc,
+          };
+        }
+      )
+    )
   );
 
   server.registerTool(
@@ -345,12 +389,32 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .describe("Example name; omit to get every example"),
       },
     },
-    handler(async ({ name }) => {
-      if (!name) return EXAMPLES;
-      const example = getExample(name);
-      if (!example) throw new Error(`Unknown example "${name}"`);
-      return example;
-    })
+    handler(async ({ name }) =>
+      liveAuthoringOrFallback(
+        () =>
+          client.get(
+            name
+              ? `/api/render/examples/${encodeURIComponent(name)}/api-key`
+              : "/api/render/examples/api-key"
+          ),
+        () => {
+          if (!name) {
+            return {
+              schemaVersion: SCHEMA_VERSION,
+              sourceOfTruth: SOURCE_OF_TRUTH,
+              examples: EXAMPLES,
+            };
+          }
+          const example = getExample(name);
+          if (!example) throw new Error(`Unknown example "${name}"`);
+          return {
+            schemaVersion: SCHEMA_VERSION,
+            sourceOfTruth: SOURCE_OF_TRUTH,
+            example,
+          };
+        }
+      )
+    )
   );
 
   server.registerTool(
@@ -363,16 +427,23 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         payload: z.record(z.unknown()).describe("The (possibly invalid) project JSON to repair"),
       },
     },
-    handler(async ({ payload }) => {
-      const { repaired, changes, result } = repairProject(payload);
-      return {
-        repaired,
-        changes,
-        valid: result.valid,
-        remainingErrors: result.errors,
-        warnings: result.warnings,
-      };
-    })
+    handler(async ({ payload }) =>
+      liveAuthoringOrFallback(
+        () => client.post("/api/render/repair/api-key", { payload }),
+        () => {
+          const { repaired, changes, result } = repairProject(payload);
+          return {
+            schemaVersion: SCHEMA_VERSION,
+            sourceOfTruth: SOURCE_OF_TRUTH,
+            repaired,
+            changes,
+            valid: result.valid,
+            remainingErrors: result.errors,
+            warnings: result.warnings,
+          };
+        }
+      )
+    )
   );
 
   // ---- bulk renders -----------------------------------------------------------

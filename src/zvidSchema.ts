@@ -133,6 +133,10 @@ export const XFADE_EFFECTS = [
   "dissolve", "pixelize", "radial", "hblur",
   "wipetl", "wipetr", "wipebl", "wipebr",
   "fadegrays", "zoomin", "hlwind", "hrwind",
+  "squeezeh", "squeezev", "fadefast", "fadeslow",
+  "vuwind", "vdwind",
+  "coverleft", "coverright", "coverup", "coverdown",
+  "revealleft", "revealright", "revealup", "revealdown",
 ] as const;
 
 export const VIDEO_OUTPUT_FORMATS = ["mp4", "mov", "avi", "webm"] as const;

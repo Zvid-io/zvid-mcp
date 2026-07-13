@@ -126,6 +126,36 @@ test("get_project_schema returns a structured JSON Schema + notes", async () => 
   assert.ok(envBody.jsonSchema.properties.template, "envelope schema should describe template");
 });
 
+test("get_project_schema prefers the live plan-aware authoring endpoint", async () => {
+  const seen: string[] = [];
+  const fetchImpl = (async (url: URL | RequestInfo) => {
+    seen.push(String(url));
+    return new Response(
+      JSON.stringify({
+        schemaVersion: "1.0.0",
+        sourceOfTruth: "orch/middleware/validation.js (createProjectSchema)",
+        target: "project",
+        jsonSchema: { type: "object", maximumFromPlan: 42 },
+        validationNotes: [],
+        authoringGuidelines: ["Use scenes"],
+        authoringWorkflow: ["Validate before rendering"],
+        planLimits: { planName: "Test", maxDuration: 42 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }) as typeof fetch;
+  const client = await connectedClient(fetchImpl);
+  const body = firstJson(
+    await client.callTool({ name: "get_project_schema", arguments: {} })
+  );
+  assert.equal(
+    seen[0],
+    "http://localhost:4000/api/render/schema/api-key?target=project"
+  );
+  assert.equal(body.planLimits.maxDuration, 42);
+  assert.equal(body.authoringWorkflow[0], "Validate before rendering");
+});
+
 test("validate_project_json accepts a valid payload without calling the API", async () => {
   let called = false;
   const fetchImpl = (async () => {
@@ -144,6 +174,7 @@ test("validate_project_json accepts a valid payload without calling the API", as
           { type: "TEXT", text: "Hello", style: { fontSize: "64px", color: "#ffffff" } },
         ],
       },
+      remote: false,
     },
   });
 
@@ -166,6 +197,7 @@ test("validate_project_json returns field-level errors for an invalid payload", 
           { type: "VIDEO", src: "https://cdn.example.com/v.mp4" }, // not allowed in image
         ],
       },
+      remote: false,
     },
   });
 
@@ -194,6 +226,7 @@ test("validate_project_json surfaces layout lint warnings", async () => {
           { type: "TEXT", text: "B", position: "center-center", width: 900, height: 150, y: 60, style: { color: "#ffffff" } },
         ],
       },
+      remote: false,
     },
   });
   const body = firstJson(result);
@@ -240,9 +273,9 @@ test("list_supported_elements and get_element_docs describe the element set", as
   const text = firstJson(
     await client.callTool({ name: "get_element_docs", arguments: { element: "TEXT" } })
   );
-  assert.equal(text.type, "TEXT");
-  assert.ok(text.fields.length > 0);
-  assert.ok(text.example);
+  assert.equal(text.element.type, "TEXT");
+  assert.ok(text.element.fields.length > 0);
+  assert.ok(text.element.example);
 
   const bad = await client.callTool({
     name: "get_element_docs",
@@ -256,11 +289,11 @@ test("get_example_payload returns validated examples", async () => {
   const one = firstJson(
     await client.callTool({ name: "get_example_payload", arguments: { name: "promo-video" } })
   );
-  assert.equal(one.name, "promo-video");
-  assert.equal(one.payload.scenes.length, 3, "promo example should be scene-based");
+  assert.equal(one.example.name, "promo-video");
+  assert.equal(one.example.payload.scenes.length, 3, "promo example should be scene-based");
 
   const all = firstJson(await client.callTool({ name: "get_example_payload", arguments: {} }));
-  assert.equal(all.length, 5);
+  assert.equal(all.examples.length, 5);
 });
 
 test("repair_project_json fixes fixable problems and reports changes", async () => {
