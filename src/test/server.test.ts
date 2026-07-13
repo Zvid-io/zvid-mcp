@@ -21,6 +21,10 @@ const EXPECTED_TOOLS = [
   "list_bulk_renders",
   "list_templates",
   "get_template",
+  "create_template",
+  "update_template",
+  "delete_template",
+  "duplicate_template",
   "preview_template",
   "list_projects",
   "get_project",
@@ -98,6 +102,56 @@ test("create_render rejects payload+template together without calling the API", 
 
   assert.equal(called, false);
   assert.equal(result.isError, true);
+});
+
+test("template tools expose the complete CRUD workflow", async () => {
+  const seen: Array<{ method: string; path: string; body?: unknown }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    seen.push({
+      method: init?.method ?? "GET",
+      path: url.pathname,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
+    return new Response(
+      JSON.stringify(
+        init?.method === "DELETE"
+          ? { archived: true, id: "tpl_00000000000000000000" }
+          : {
+              template: {
+                id: "tpl_00000000000000000000",
+                name: "Promo",
+                project: { duration: 5 },
+              },
+            }
+      ),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }) as typeof fetch;
+  const client = await connectedClient(fetchImpl);
+  const templateId = "tpl_00000000000000000000";
+
+  await client.callTool({
+    name: "create_template",
+    arguments: { name: "Promo", payload: { duration: 5 } },
+  });
+  await client.callTool({
+    name: "update_template",
+    arguments: { templateId, name: "Promo 2" },
+  });
+  await client.callTool({ name: "duplicate_template", arguments: { templateId } });
+  await client.callTool({ name: "delete_template", arguments: { templateId } });
+
+  assert.deepEqual(
+    seen.map(({ method, path }) => `${method} ${path}`),
+    [
+      "POST /api/templates",
+      `PUT /api/templates/${templateId}`,
+      `POST /api/templates/${templateId}/duplicate`,
+      `DELETE /api/templates/${templateId}`,
+    ]
+  );
+  assert.deepEqual(seen[0].body, { name: "Promo", payload: { duration: 5 } });
 });
 
 function firstJson(result: unknown): any {

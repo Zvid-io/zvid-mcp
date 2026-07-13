@@ -9,8 +9,10 @@
  *   GET  /api/jobs/:id                       render status
  *   GET  /api/jobs                           list renders
  *   GET  /api/render/bulk(/:id)              bulk render status/list
- *   GET  /api/templates(/:id)                templates
- *   POST /api/templates/:id/preview          dry-run variable resolution
+ *   GET/POST /api/templates                  list/create templates
+ *   GET/PUT/DELETE /api/templates/:id        read/update/archive templates
+ *   POST /api/templates/:id/(duplicate|preview)
+ *                                               copy or dry-run variable resolution
  *   CRUD /api/projects                       editor draft projects
  *   CRUD /api/webhooks                       webhook endpoints
  *   GET  /api/credits/balance|usage-stats    credits
@@ -526,6 +528,68 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       inputSchema: { templateId: templateIdSchema },
     },
     handler(({ templateId }) => client.get(`/api/templates/${encodeURIComponent(templateId)}`))
+  );
+
+  server.registerTool(
+    "create_template",
+    {
+      title: "Create template",
+      description:
+        "Create a reusable template from complete project JSON. Read get_project_schema first; every placeholder must have a safe default and video-template scenes need explicit durations. The backend validates the template against this account's plan before saving it.",
+      inputSchema: {
+        name: z.string().trim().min(1).max(255),
+        description: z.string().max(2000).optional(),
+        payload: payloadSchema,
+      },
+    },
+    handler((body) => client.post("/api/templates", body))
+  );
+
+  server.registerTool(
+    "update_template",
+    {
+      title: "Update template",
+      description:
+        "Rename a template, change its description, and/or replace its project JSON. Get the current template first so fields are not accidentally lost; replacement JSON is fully validated before saving.",
+      inputSchema: {
+        templateId: templateIdSchema,
+        name: z.string().trim().min(1).max(255).optional(),
+        description: z.string().max(2000).optional(),
+        payload: payloadSchema.optional(),
+      },
+    },
+    handler(({ templateId, ...body }) => {
+      if (Object.keys(body).length === 0) {
+        throw new Error("Provide at least one of name, description, or payload");
+      }
+      return client.put(`/api/templates/${encodeURIComponent(templateId)}`, body);
+    })
+  );
+
+  server.registerTool(
+    "delete_template",
+    {
+      title: "Archive template",
+      description:
+        "Archive an active template owned by this account. Archived templates cannot be rendered or updated, so call this only when the user explicitly asks to remove it.",
+      inputSchema: { templateId: templateIdSchema },
+    },
+    handler(({ templateId }) =>
+      client.delete(`/api/templates/${encodeURIComponent(templateId)}`)
+    )
+  );
+
+  server.registerTool(
+    "duplicate_template",
+    {
+      title: "Duplicate template",
+      description:
+        "Create an editable copy of an owned template, including archived templates. The copy is active and counts against the account's template quota.",
+      inputSchema: { templateId: templateIdSchema },
+    },
+    handler(({ templateId }) =>
+      client.post(`/api/templates/${encodeURIComponent(templateId)}/duplicate`)
+    )
   );
 
   server.registerTool(

@@ -71,7 +71,9 @@ claude mcp add zvid --env ZVID_API_KEY=zvid_your_key_here -- node /absolute/path
 | `list_renders` | List render jobs (filter by `type`) |
 | `create_bulk_render` | One template/payload × N variable sets → N jobs (max 500) |
 | `get_bulk_render` / `list_bulk_renders` | Inspect bulk batches |
-| `list_templates` / `get_template` | Browse templates; `get_template` returns the full project JSON |
+| `list_templates` / `get_template` | Browse owned templates; `get_template` returns the full project JSON |
+| `create_template` / `update_template` | Create a plan-validated reusable template or update its name, description, and/or project JSON |
+| `duplicate_template` / `delete_template` | Make an active editable copy, or archive an active template (explicit removal requests only) |
 | `preview_template` | Dry-run variable resolution + validation — costs no credits |
 | `list_projects` / `get_project` / `create_project` / `update_project` / `delete_project` | Editor draft projects (open at `https://zvid.io/editor?project=<id>`) |
 | `list_webhooks` / `create_webhook` / `get_webhook` / `update_webhook` / `delete_webhook` / `test_webhook` / `list_webhook_deliveries` | Webhook endpoints for `render.completed` / `render.failed` (HMAC-SHA256 signed) |
@@ -88,6 +90,8 @@ Recommended flow for an AI client authoring a video:
 3. Compose the JSON, then `validate_project_json` (add `remote: true` to check against your plan's actual limits — the API echoes them in `planLimits` on failure).
 4. If invalid, fix by hand or try `repair_project_json`.
 5. `create_render` / `create_image_render`, then poll `get_render`.
+
+For a reusable template, replace step 5 with `create_template`. Later use `get_template` before `update_template`, `preview_template` before rendering, `duplicate_template` for a safe editable copy, and `delete_template` only when the user explicitly asks to archive it.
 
 ## Example prompts
 
