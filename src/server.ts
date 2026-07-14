@@ -24,6 +24,7 @@ import { ZvidApiError, ZvidClient } from "./client.js";
 import {
   buildProjectJsonSchema,
   buildRenderRequestJsonSchema,
+  buildCreativePlan,
   getElementDocs,
   getExample,
   listElements,
@@ -31,6 +32,9 @@ import {
   validateProject,
   validateRenderRequest,
   AUTHORING_GUIDELINES,
+  CREATIVE_ASPECT_RATIOS,
+  CREATIVE_MOTION_INTENSITIES,
+  CREATIVE_STYLE_PACKS,
   DEFAULT_LIMITS,
   EXAMPLES,
   FREE_PLAN_LIMITS,
@@ -63,13 +67,15 @@ function fail(err: unknown) {
       : { message: err instanceof Error ? err.message : String(err) };
   return {
     isError: true,
-    content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+    content: [
+      { type: "text" as const, text: JSON.stringify(payload, null, 2) },
+    ],
   };
 }
 
 async function liveAuthoringOrFallback<T>(
   load: () => Promise<T>,
-  fallback: () => T
+  fallback: () => T,
 ): Promise<T | (T & { live: false; liveError: string })> {
   try {
     return await load();
@@ -100,7 +106,7 @@ function handler<A>(fn: (args: A) => Promise<unknown>) {
 const payloadSchema = z
   .record(z.unknown())
   .describe(
-    "Full Zvid project JSON (scenes, elements, output settings). Call get_project_schema for the JSON Schema, list_supported_elements / get_element_docs for element docs, and validate_project_json BEFORE rendering."
+    "Full Zvid project JSON (scenes, elements, output settings). Call get_project_schema for the JSON Schema, list_supported_elements / get_element_docs for element docs, and validate_project_json BEFORE rendering.",
   );
 
 const templateIdSchema = z
@@ -129,13 +135,15 @@ const overridesSchema = z
     quality: z.number().optional().describe("Image renders only"),
     transparent: z.boolean().optional().describe("Image renders only"),
   })
-  .describe("Optional output overrides applied on top of the payload/template.");
+  .describe(
+    "Optional output overrides applied on top of the payload/template.",
+  );
 
 const webhookUrlSchema = z
   .string()
   .url()
   .describe(
-    "Optional per-job webhook URL notified on render.completed / render.failed."
+    "Optional per-job webhook URL notified on render.completed / render.failed.",
   );
 
 const paginationShape = {
@@ -157,6 +165,36 @@ const renderEnvelopeShape = {
   webhookUrl: webhookUrlSchema.optional(),
 };
 
+const creativeLibraryKindSchema = z.enum([
+  "examples",
+  "design-templates",
+  "canvas-presets",
+  "shapes",
+]);
+
+const brandKitSchema = z
+  .object({
+    name: z.string().max(200).optional(),
+    primaryColor: z
+      .string()
+      .regex(/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/)
+      .optional(),
+    secondaryColor: z
+      .string()
+      .regex(/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/)
+      .optional(),
+    accentColor: z
+      .string()
+      .regex(/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/)
+      .optional(),
+    headlineFont: z.string().max(100).optional(),
+    bodyFont: z.string().max(100).optional(),
+    logoUrl: z.string().url().max(2048).optional(),
+  })
+  .describe(
+    "Optional brand tokens that remain stable across creative variations.",
+  );
+
 export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
   const server = new McpServer({ name: "zvid", version });
 
@@ -173,7 +211,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     handler(async (args) => {
       requireOneOf(args, "payload", "template");
       return client.post("/api/render/api-key", args);
-    })
+    }),
   );
 
   server.registerTool(
@@ -187,7 +225,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     handler(async (args) => {
       requireOneOf(args, "payload", "template");
       return client.post("/api/render/image/api-key", args);
-    })
+    }),
   );
 
   server.registerTool(
@@ -197,23 +235,30 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description:
         "Get a render job's state (waiting|active|completed|failed), progress (0-100), and — when completed — the output url and thumbnailUrl.",
       inputSchema: {
-        jobId: z.string().describe("Render job ID (UUID) returned when the render was created"),
+        jobId: z
+          .string()
+          .describe(
+            "Render job ID (UUID) returned when the render was created",
+          ),
       },
     },
-    handler(({ jobId }) => client.get(`/api/jobs/${encodeURIComponent(jobId)}`))
+    handler(({ jobId }) =>
+      client.get(`/api/jobs/${encodeURIComponent(jobId)}`),
+    ),
   );
 
   server.registerTool(
     "list_renders",
     {
       title: "List renders",
-      description: "List this account's render jobs, newest first. Optionally filter by type (video|image).",
+      description:
+        "List this account's render jobs, newest first. Optionally filter by type (video|image).",
       inputSchema: {
         ...paginationShape,
         type: z.enum(["video", "image"]).optional(),
       },
     },
-    handler((args) => client.get("/api/jobs", args))
+    handler((args) => client.get("/api/jobs", args)),
   );
 
   // ---- schema & authoring -------------------------------------------------------
@@ -226,12 +271,14 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     {
       title: "Get project JSON Schema",
       description:
-        "Get the JSON Schema (draft 2020-12) for a Zvid render payload — element types, required fields, enums, defaults, min/max bounds and URL restrictions — plus notes for cross-field rules the schema cannot express (timing checks, plan limits, sanitizer rules). Use target: \"render-request\" for the full request envelope (payload XOR template + variables/overrides/webhookUrl). Derived from the backend validation code, which always wins over docs.",
+        'Get the JSON Schema (draft 2020-12) for a Zvid render payload — element types, required fields, enums, defaults, min/max bounds and URL restrictions — plus notes for cross-field rules the schema cannot express (timing checks, plan limits, sanitizer rules). Use target: "render-request" for the full request envelope (payload XOR template + variables/overrides/webhookUrl). Derived from the backend validation code, which always wins over docs.',
       inputSchema: {
         target: z
           .enum(["project", "render-request"])
           .optional()
-          .describe('What to describe: "project" (the payload object, default) or "render-request" (the full POST body)'),
+          .describe(
+            'What to describe: "project" (the payload object, default) or "render-request" (the full POST body)',
+          ),
       },
     },
     handler(async ({ target }) =>
@@ -258,9 +305,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
               freeTier: FREE_PLAN_LIMITS,
             },
           };
-        }
-      )
-    )
+        },
+      ),
+    ),
   );
 
   server.registerTool(
@@ -270,15 +317,23 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description:
         "Validate a Zvid project payload BEFORE rendering (free, no credits). Returns { valid, errors: [{field, message}], warnings }. Warnings include LAYOUT LINT — overlapping texts, x/y ignored by position presets, boxes extending off-canvas, padding that will get cut off, low text contrast — treat every layout warning as a fix-before-render item. Local validation mirrors the backend rules; set remote: true to ALSO run the payload through the live API validator (POST /api/render/validate/api-key — resolves templates and applies your plan's real limits).",
       inputSchema: {
-        payload: z.record(z.unknown()).describe("The project JSON to validate (the `payload` you would pass to create_render)"),
+        payload: z
+          .record(z.unknown())
+          .describe(
+            "The project JSON to validate (the `payload` you would pass to create_render)",
+          ),
         kind: z
           .enum(["project", "render-request"])
           .optional()
-          .describe('Validate as a bare "project" payload (default) or as a full "render-request" body'),
+          .describe(
+            'Validate as a bare "project" payload (default) or as a full "render-request" body',
+          ),
         remote: z
           .boolean()
           .default(true)
-          .describe("Also validate server-side against your account's actual plan limits (default true; set false only for offline diagnostics)"),
+          .describe(
+            "Also validate server-side against your account's actual plan limits (default true; set false only for offline diagnostics)",
+          ),
       },
     },
     handler(async ({ payload, kind, remote }) => {
@@ -297,11 +352,17 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       if (remote) {
         const body = kind === "render-request" ? payload : { payload };
         try {
-          const remoteRes = await client.post("/api/render/validate/api-key", body);
+          const remoteRes = await client.post(
+            "/api/render/validate/api-key",
+            body,
+          );
           result.remote = { valid: true, response: remoteRes };
         } catch (err) {
           if (err instanceof ZvidApiError && err.status === 400) {
-            result.remote = { valid: false, errors: err.details ?? err.message };
+            result.remote = {
+              valid: false,
+              errors: err.details ?? err.message,
+            };
             result.valid = false;
           } else if (err instanceof ZvidApiError && err.status === 404) {
             result.remote = {
@@ -314,7 +375,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         }
       }
       return result;
-    })
+    }),
   );
 
   server.registerTool(
@@ -333,14 +394,14 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           sourceOfTruth: SOURCE_OF_TRUTH,
           elements: listElements(),
           notes: [
-            'Visual elements live in `visuals` (project-level or per-scene); the discriminator is `type` (case-insensitive).',
+            "Visual elements live in `visuals` (project-level or per-scene); the discriminator is `type` (case-insensitive).",
             "AUDIO items live in `audios`, SUBTITLE in the top-level `subtitle` object, SCENEs in `scenes`.",
             'Image projects (type: "image") only allow IMAGE, TEXT and SVG visuals.',
           ],
           authoringGuidelines: AUTHORING_GUIDELINES,
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
 
   server.registerTool(
@@ -352,20 +413,22 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       inputSchema: {
         element: z
           .string()
-          .describe('Element type, e.g. "TEXT", "IMAGE", "VIDEO", "GIF", "SVG", "AUDIO", "SUBTITLE", "SCENE"'),
+          .describe(
+            'Element type, e.g. "TEXT", "IMAGE", "VIDEO", "GIF", "SVG", "AUDIO", "SUBTITLE", "SCENE"',
+          ),
       },
     },
     handler(async ({ element }) =>
       liveAuthoringOrFallback(
         () =>
           client.get(
-            `/api/render/elements/${encodeURIComponent(element)}/api-key`
+            `/api/render/elements/${encodeURIComponent(element)}/api-key`,
           ),
         () => {
           const doc = getElementDocs(element);
           if (!doc) {
             throw new Error(
-              `Unknown element type "${element}". Supported: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE.`
+              `Unknown element type "${element}". Supported: IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE.`,
             );
           }
           return {
@@ -373,9 +436,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
             sourceOfTruth: SOURCE_OF_TRUTH,
             element: doc,
           };
-        }
-      )
-    )
+        },
+      ),
+    ),
   );
 
   server.registerTool(
@@ -386,7 +449,13 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         "Get a validated, layout-clean example for a common flow: promo-video (10s scene-based hook/value/CTA with scrim + flex-centered card), template-render (variables), still-image (transparent PNG, single html card), subtitles (karaoke captions), webhook-flow (per-job webhookUrl). These encode the authoring guidelines — start from one instead of composing from scratch. Omit `name` to list all examples.",
       inputSchema: {
         name: z
-          .enum(["promo-video", "template-render", "still-image", "subtitles", "webhook-flow"])
+          .enum([
+            "promo-video",
+            "template-render",
+            "still-image",
+            "subtitles",
+            "webhook-flow",
+          ])
           .optional()
           .describe("Example name; omit to get every example"),
       },
@@ -397,7 +466,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           client.get(
             name
               ? `/api/render/examples/${encodeURIComponent(name)}/api-key`
-              : "/api/render/examples/api-key"
+              : "/api/render/examples/api-key",
           ),
         () => {
           if (!name) {
@@ -414,9 +483,152 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
             sourceOfTruth: SOURCE_OF_TRUTH,
             example,
           };
-        }
-      )
-    )
+        },
+      ),
+    ),
+  );
+
+  server.registerTool(
+    "plan_creative_video",
+    {
+      title: "Plan a professional creative video",
+      description:
+        "Turn a brief into a plan-aware storyboard, style/layout direction, scene recipes, creative-library searches and anti-repetition rules BEFORE authoring JSON. Modes: consistent reuses a stable seed; fresh produces a new direction; explore returns 2-5 materially different directions. If no full-video example fits, the plan assembles a new video from scene recipes, design templates, canvas presets, shapes and stock media instead of forcing an unrelated template.",
+      inputSchema: {
+        brief: z
+          .string()
+          .trim()
+          .min(3)
+          .max(4000)
+          .describe(
+            "What the video should communicate, for whom, and the desired outcome.",
+          ),
+        variationMode: z
+          .enum(["consistent", "fresh", "explore"])
+          .default("fresh"),
+        variationSeed: z
+          .union([z.string().min(1).max(128), z.number().int()])
+          .optional()
+          .describe(
+            "Optional reproducible seed. Reuse it for the same composition; change or omit it for a fresh direction.",
+          ),
+        exploreCount: z.number().int().min(2).max(5).default(3).optional(),
+        aspectRatio: z.enum(CREATIVE_ASPECT_RATIOS).default("16:9"),
+        duration: z.number().positive().max(86400).default(15),
+        style: z
+          .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .default("auto")
+          .describe(
+            `Style pack id or auto. Built-ins: ${CREATIVE_STYLE_PACKS.map((p) => p.id).join(", ")}.`,
+          ),
+        motionIntensity: z.enum(CREATIVE_MOTION_INTENSITIES).optional(),
+        preferredMedia: z.enum(["image", "video", "mixed"]).default("mixed"),
+        recentAssetSlugs: z
+          .array(z.string().trim().min(1).max(255))
+          .max(20)
+          .default([])
+          .describe(
+            "Recently used creative-library slugs to exclude from fresh/explore results.",
+          ),
+        brand: brandKitSchema.optional(),
+      },
+    },
+    handler(async (args) =>
+      liveAuthoringOrFallback(
+        () => client.post("/api/render/creative-plan/api-key", args),
+        () => ({
+          schemaVersion: SCHEMA_VERSION,
+          sourceOfTruth: SOURCE_OF_TRUTH,
+          planLimits: DEFAULT_LIMITS,
+          ...buildCreativePlan(
+            {
+              ...args,
+              ...(args.variationMode === "consistent" ||
+              args.variationSeed !== undefined
+                ? {}
+                : { nonce: Date.now() }),
+            },
+            DEFAULT_LIMITS,
+          ),
+        }),
+      ),
+    ),
+  );
+
+  server.registerTool(
+    "search_creative_library",
+    {
+      title: "Search the creative library",
+      description:
+        "Search curated complete project examples, animated Design Studio templates, canvas motion presets, or shapes. Inspect preview/thumbnail metadata before choosing. For fresh/explore work, exclude recent slugs returned by plan_creative_video.",
+      inputSchema: {
+        kind: creativeLibraryKindSchema,
+        query: z.string().trim().max(200).optional(),
+        limit: z.number().int().min(1).max(60).default(12),
+        offset: z.number().int().min(0).default(0),
+      },
+    },
+    handler(({ kind, query, limit, offset }) =>
+      client.get(`/api/library/${encodeURIComponent(kind)}`, {
+        q: query,
+        limit,
+        offset,
+      }),
+    ),
+  );
+
+  server.registerTool(
+    "get_creative_asset",
+    {
+      title: "Get a creative-library asset",
+      description:
+        "Get metadata and, by default, the full JSON content for one creative-library item. Examples are complete projects; design templates/canvas presets/shapes are reusable modules and must be composed into a project.",
+      inputSchema: {
+        kind: creativeLibraryKindSchema,
+        slug: z.string().trim().min(1).max(255),
+        includeContent: z.boolean().default(true),
+      },
+    },
+    handler(async ({ kind, slug, includeContent }) => {
+      const base = `/api/library/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}`;
+      const item = await client.get(base);
+      if (!includeContent) return { item };
+      const content = await client.get(`${base}/content`);
+      return { item, content };
+    }),
+  );
+
+  server.registerTool(
+    "list_stock_providers",
+    {
+      title: "List configured stock-media providers",
+      description:
+        "List the stock providers currently available for image, video, GIF and audio searches.",
+      inputSchema: {},
+    },
+    handler(() => client.get("/api/stock/providers")),
+  );
+
+  server.registerTool(
+    "search_stock_media",
+    {
+      title: "Search stock media",
+      description:
+        "Search server-configured stock image, video, GIF or music providers. Results contain preview and full-quality src URLs suitable for Zvid payloads plus dimensions/duration and attribution metadata.",
+      inputSchema: {
+        type: z.enum(["image", "video", "gif", "audio"]),
+        provider: z
+          .enum(["all", "pexels", "pixabay", "unsplash", "giphy", "jamendo"])
+          .default("all"),
+        query: z.string().trim().max(200).default(""),
+        page: z.number().int().min(1).max(500).default(1),
+        perPage: z.number().int().min(1).max(60).default(12),
+      },
+    },
+    handler((args) => client.get("/api/stock/search", args)),
   );
 
   server.registerTool(
@@ -426,7 +638,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description:
         "Attempt conservative auto-fixes on an invalid project payload (wrong-case type, clamped numbers, format conflicts like transparent+jpg, swapped begin/end timings, unknown fields, empty/impossible elements) and explain every change. Returns the repaired payload plus its validation result — problems that need real input (e.g. missing media URLs) are left as errors.",
       inputSchema: {
-        payload: z.record(z.unknown()).describe("The (possibly invalid) project JSON to repair"),
+        payload: z
+          .record(z.unknown())
+          .describe("The (possibly invalid) project JSON to repair"),
       },
     },
     handler(async ({ payload }) =>
@@ -443,9 +657,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
             remainingErrors: result.errors,
             warnings: result.warnings,
           };
-        }
-      )
-    )
+        },
+      ),
+    ),
   );
 
   // ---- bulk renders -----------------------------------------------------------
@@ -467,13 +681,20 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .array(
             z.object({
               variables: variablesSchema.optional(),
-              name: z.string().optional().describe("Per-item output name override"),
-            })
+              name: z
+                .string()
+                .optional()
+                .describe("Per-item output name override"),
+            }),
           )
           .min(1)
           .max(500)
-          .describe("One entry per render; each item's variables merge over the base variables."),
-        variables: variablesSchema.optional().describe("Base variables applied to every item"),
+          .describe(
+            "One entry per render; each item's variables merge over the base variables.",
+          ),
+        variables: variablesSchema
+          .optional()
+          .describe("Base variables applied to every item"),
         overrides: overridesSchema.optional(),
         name: z.string().optional().describe("Name for the bulk batch"),
         webhookUrl: webhookUrlSchema.optional(),
@@ -482,19 +703,26 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     handler(async ({ kind, ...body }) => {
       requireOneOf(body, "payload", "template");
       const path =
-        kind === "image" ? "/api/render/image/bulk/api-key" : "/api/render/bulk/api-key";
+        kind === "image"
+          ? "/api/render/image/bulk/api-key"
+          : "/api/render/bulk/api-key";
       return client.post(path, body);
-    })
+    }),
   );
 
   server.registerTool(
     "get_bulk_render",
     {
       title: "Get bulk render",
-      description: "Get a bulk render batch by ID (blk_...) including its jobs' states.",
-      inputSchema: { bulkId: z.string().describe('Bulk render ID, e.g. "blk_..."') },
+      description:
+        "Get a bulk render batch by ID (blk_...) including its jobs' states.",
+      inputSchema: {
+        bulkId: z.string().describe('Bulk render ID, e.g. "blk_..."'),
+      },
     },
-    handler(({ bulkId }) => client.get(`/api/render/bulk/${encodeURIComponent(bulkId)}`))
+    handler(({ bulkId }) =>
+      client.get(`/api/render/bulk/${encodeURIComponent(bulkId)}`),
+    ),
   );
 
   server.registerTool(
@@ -504,7 +732,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "List this account's bulk render batches.",
       inputSchema: { ...paginationShape },
     },
-    handler((args) => client.get("/api/render/bulk", args))
+    handler((args) => client.get("/api/render/bulk", args)),
   );
 
   // ---- templates ----------------------------------------------------------------
@@ -513,10 +741,11 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     "list_templates",
     {
       title: "List templates",
-      description: "List this account's render templates (id, name, description).",
+      description:
+        "List this account's render templates (id, name, description).",
       inputSchema: { ...paginationShape },
     },
-    handler((args) => client.get("/api/templates", args))
+    handler((args) => client.get("/api/templates", args)),
   );
 
   server.registerTool(
@@ -527,7 +756,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         "Get a template by ID including its full project JSON (inspect it to discover the variables it expects).",
       inputSchema: { templateId: templateIdSchema },
     },
-    handler(({ templateId }) => client.get(`/api/templates/${encodeURIComponent(templateId)}`))
+    handler(({ templateId }) =>
+      client.get(`/api/templates/${encodeURIComponent(templateId)}`),
+    ),
   );
 
   server.registerTool(
@@ -542,7 +773,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         payload: payloadSchema,
       },
     },
-    handler((body) => client.post("/api/templates", body))
+    handler((body) => client.post("/api/templates", body)),
   );
 
   server.registerTool(
@@ -560,10 +791,15 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     },
     handler(({ templateId, ...body }) => {
       if (Object.keys(body).length === 0) {
-        throw new Error("Provide at least one of name, description, or payload");
+        throw new Error(
+          "Provide at least one of name, description, or payload",
+        );
       }
-      return client.put(`/api/templates/${encodeURIComponent(templateId)}`, body);
-    })
+      return client.put(
+        `/api/templates/${encodeURIComponent(templateId)}`,
+        body,
+      );
+    }),
   );
 
   server.registerTool(
@@ -575,8 +811,8 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       inputSchema: { templateId: templateIdSchema },
     },
     handler(({ templateId }) =>
-      client.delete(`/api/templates/${encodeURIComponent(templateId)}`)
-    )
+      client.delete(`/api/templates/${encodeURIComponent(templateId)}`),
+    ),
   );
 
   server.registerTool(
@@ -588,8 +824,8 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       inputSchema: { templateId: templateIdSchema },
     },
     handler(({ templateId }) =>
-      client.post(`/api/templates/${encodeURIComponent(templateId)}/duplicate`)
-    )
+      client.post(`/api/templates/${encodeURIComponent(templateId)}/duplicate`),
+    ),
   );
 
   server.registerTool(
@@ -605,8 +841,11 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       },
     },
     handler(({ templateId, ...body }) =>
-      client.post(`/api/templates/${encodeURIComponent(templateId)}/preview`, body)
-    )
+      client.post(
+        `/api/templates/${encodeURIComponent(templateId)}/preview`,
+        body,
+      ),
+    ),
   );
 
   // ---- projects (editor drafts) -------------------------------------------------
@@ -618,7 +857,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "List editor draft projects saved on this account.",
       inputSchema: { ...paginationShape },
     },
-    handler((args) => client.get("/api/projects", args))
+    handler((args) => client.get("/api/projects", args)),
   );
 
   server.registerTool(
@@ -628,7 +867,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "Get a draft project (prj_...) including its project JSON.",
       inputSchema: { projectId: projectIdSchema() },
     },
-    handler(({ projectId }) => client.get(`/api/projects/${encodeURIComponent(projectId)}`))
+    handler(({ projectId }) =>
+      client.get(`/api/projects/${encodeURIComponent(projectId)}`),
+    ),
   );
 
   server.registerTool(
@@ -642,7 +883,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         payload: payloadSchema,
       },
     },
-    handler((body) => client.post("/api/projects", body))
+    handler((body) => client.post("/api/projects", body)),
   );
 
   server.registerTool(
@@ -661,7 +902,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         throw new Error("Provide name and/or payload to update.");
       }
       return client.put(`/api/projects/${encodeURIComponent(projectId)}`, body);
-    })
+    }),
   );
 
   server.registerTool(
@@ -671,7 +912,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "Permanently delete a draft project.",
       inputSchema: { projectId: projectIdSchema() },
     },
-    handler(({ projectId }) => client.delete(`/api/projects/${encodeURIComponent(projectId)}`))
+    handler(({ projectId }) =>
+      client.delete(`/api/projects/${encodeURIComponent(projectId)}`),
+    ),
   );
 
   // ---- webhooks -------------------------------------------------------------------
@@ -680,10 +923,11 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     "list_webhooks",
     {
       title: "List webhooks",
-      description: "List webhook endpoints registered on this account, plus usage vs plan limit.",
+      description:
+        "List webhook endpoints registered on this account, plus usage vs plan limit.",
       inputSchema: {},
     },
-    handler(() => client.get("/api/webhooks"))
+    handler(() => client.get("/api/webhooks")),
   );
 
   server.registerTool(
@@ -701,28 +945,35 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         description: z.string().max(255).optional(),
       },
     },
-    handler((body) => client.post("/api/webhooks", body))
+    handler((body) => client.post("/api/webhooks", body)),
   );
 
   server.registerTool(
     "get_webhook",
     {
       title: "Get webhook",
-      description: "Get a webhook endpoint (whk_...) including its signing secret and failure state.",
+      description:
+        "Get a webhook endpoint (whk_...) including its signing secret and failure state.",
       inputSchema: { webhookId: webhookIdSchema() },
     },
-    handler(({ webhookId }) => client.get(`/api/webhooks/${encodeURIComponent(webhookId)}`))
+    handler(({ webhookId }) =>
+      client.get(`/api/webhooks/${encodeURIComponent(webhookId)}`),
+    ),
   );
 
   server.registerTool(
     "update_webhook",
     {
       title: "Update webhook",
-      description: "Update a webhook's url, events, description, or enable/disable it.",
+      description:
+        "Update a webhook's url, events, description, or enable/disable it.",
       inputSchema: {
         webhookId: webhookIdSchema(),
         url: z.string().url().optional(),
-        events: z.array(z.enum(["render.completed", "render.failed"])).min(1).optional(),
+        events: z
+          .array(z.enum(["render.completed", "render.failed"]))
+          .min(1)
+          .optional(),
         description: z.string().max(255).optional(),
         status: z.enum(["active", "disabled"]).optional(),
       },
@@ -732,7 +983,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         throw new Error("Provide at least one field to update.");
       }
       return client.put(`/api/webhooks/${encodeURIComponent(webhookId)}`, body);
-    })
+    }),
   );
 
   server.registerTool(
@@ -742,7 +993,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "Delete a webhook endpoint.",
       inputSchema: { webhookId: webhookIdSchema() },
     },
-    handler(({ webhookId }) => client.delete(`/api/webhooks/${encodeURIComponent(webhookId)}`))
+    handler(({ webhookId }) =>
+      client.delete(`/api/webhooks/${encodeURIComponent(webhookId)}`),
+    ),
   );
 
   server.registerTool(
@@ -752,19 +1005,25 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       description: "Queue a signed test event delivery to a webhook endpoint.",
       inputSchema: { webhookId: webhookIdSchema() },
     },
-    handler(({ webhookId }) => client.post(`/api/webhooks/${encodeURIComponent(webhookId)}/test`))
+    handler(({ webhookId }) =>
+      client.post(`/api/webhooks/${encodeURIComponent(webhookId)}/test`),
+    ),
   );
 
   server.registerTool(
     "list_webhook_deliveries",
     {
       title: "List webhook deliveries",
-      description: "List recent delivery attempts for a webhook endpoint (status, attempts, response codes).",
+      description:
+        "List recent delivery attempts for a webhook endpoint (status, attempts, response codes).",
       inputSchema: { webhookId: webhookIdSchema(), ...paginationShape },
     },
     handler(({ webhookId, ...query }) =>
-      client.get(`/api/webhooks/${encodeURIComponent(webhookId)}/deliveries`, query)
-    )
+      client.get(
+        `/api/webhooks/${encodeURIComponent(webhookId)}/deliveries`,
+        query,
+      ),
+    ),
   );
 
   // ---- account ----------------------------------------------------------------------
@@ -777,19 +1036,23 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         "Get the account's credit balance (total balance, subscription credits, and add-on credit pack balance).",
       inputSchema: {},
     },
-    handler(() => client.get("/api/credits/balance"))
+    handler(() => client.get("/api/credits/balance")),
   );
 
   server.registerTool(
     "get_usage_stats",
     {
       title: "Get usage stats",
-      description: "Get render/credit usage statistics for a timeframe (e.g. 7d, 30d, 90d).",
+      description:
+        "Get render/credit usage statistics for a timeframe (e.g. 7d, 30d, 90d).",
       inputSchema: {
-        timeframe: z.string().optional().describe('Timeframe like "30d" (default)'),
+        timeframe: z
+          .string()
+          .optional()
+          .describe('Timeframe like "30d" (default)'),
       },
     },
-    handler((args) => client.get("/api/credits/usage-stats", args))
+    handler((args) => client.get("/api/credits/usage-stats", args)),
   );
 
   return server;

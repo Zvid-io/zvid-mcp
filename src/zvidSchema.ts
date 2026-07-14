@@ -25,7 +25,8 @@
  */
 
 export const SCHEMA_VERSION = "1.0.0";
-export const SOURCE_OF_TRUTH = "orch/middleware/validation.js (createProjectSchema)";
+export const SOURCE_OF_TRUTH =
+  "orch/middleware/validation.js (createProjectSchema)";
 
 // ---------------------------------------------------------------------------
 // Limits (plan-dependent). These are the "Default" tier baked into the
@@ -102,9 +103,15 @@ export const ELEMENT_TYPES = ["IMAGE", "VIDEO", "GIF", "SVG", "TEXT"] as const;
 export type ElementType = (typeof ELEMENT_TYPES)[number];
 
 export const POSITION_PRESETS = [
-  "top-left", "top-center", "top-right",
-  "center-left", "center-center", "center-right",
-  "bottom-right", "bottom-center", "bottom-left",
+  "top-left",
+  "top-center",
+  "top-right",
+  "center-left",
+  "center-center",
+  "center-right",
+  "bottom-right",
+  "bottom-center",
+  "bottom-left",
   "custom",
 ] as const;
 
@@ -113,51 +120,132 @@ export const ANCHORS = POSITION_PRESETS;
 export const RESIZE_MODES = ["contain", "cover"] as const;
 
 export const RESOLUTION_PRESETS = [
-  "sd", "hd", "full-hd", "squared",
-  "youtube-short", "youtube-video", "tiktok",
-  "instagram-reel", "instagram-post", "instagram-story", "instagram-feed",
-  "twitter-landscape", "twitter-portrait", "twitter-square",
-  "facebook-video", "facebook-story", "facebook-post",
-  "snapchat", "custom",
+  "sd",
+  "hd",
+  "full-hd",
+  "squared",
+  "youtube-short",
+  "youtube-video",
+  "tiktok",
+  "instagram-reel",
+  "instagram-post",
+  "instagram-story",
+  "instagram-feed",
+  "twitter-landscape",
+  "twitter-portrait",
+  "twitter-square",
+  "facebook-video",
+  "facebook-story",
+  "facebook-post",
+  "snapchat",
+  "custom",
 ] as const;
 
 export const XFADE_EFFECTS = [
-  "fade", "fadeblack", "fadewhite", "distance",
-  "wipeleft", "wiperight", "wipeup", "wipedown",
-  "slideleft", "slideright", "slideup", "slidedown",
-  "smoothleft", "smoothright", "smoothup", "smoothdown",
-  "circlecrop", "rectcrop", "circleclose", "circleopen",
-  "horzclose", "horzopen", "vertclose", "vertopen",
-  "diagbl", "diagbr", "diagtl", "diagtr",
-  "hlslice", "hrslice", "vuslice", "vdslice",
-  "dissolve", "pixelize", "radial", "hblur",
-  "wipetl", "wipetr", "wipebl", "wipebr",
-  "fadegrays", "zoomin", "hlwind", "hrwind",
-  "squeezeh", "squeezev", "fadefast", "fadeslow",
-  "vuwind", "vdwind",
-  "coverleft", "coverright", "coverup", "coverdown",
-  "revealleft", "revealright", "revealup", "revealdown",
+  "fade",
+  "fadeblack",
+  "fadewhite",
+  "distance",
+  "wipeleft",
+  "wiperight",
+  "wipeup",
+  "wipedown",
+  "slideleft",
+  "slideright",
+  "slideup",
+  "slidedown",
+  "smoothleft",
+  "smoothright",
+  "smoothup",
+  "smoothdown",
+  "circlecrop",
+  "rectcrop",
+  "circleclose",
+  "circleopen",
+  "horzclose",
+  "horzopen",
+  "vertclose",
+  "vertopen",
+  "diagbl",
+  "diagbr",
+  "diagtl",
+  "diagtr",
+  "hlslice",
+  "hrslice",
+  "vuslice",
+  "vdslice",
+  "dissolve",
+  "pixelize",
+  "radial",
+  "hblur",
+  "wipetl",
+  "wipetr",
+  "wipebl",
+  "wipebr",
+  "fadegrays",
+  "zoomin",
+  "hlwind",
+  "hrwind",
+  "squeezeh",
+  "squeezev",
+  "fadefast",
+  "fadeslow",
+  "vuwind",
+  "vdwind",
+  "coverleft",
+  "coverright",
+  "coverup",
+  "coverdown",
+  "revealleft",
+  "revealright",
+  "revealup",
+  "revealdown",
 ] as const;
 
 export const VIDEO_OUTPUT_FORMATS = ["mp4", "mov", "avi", "webm"] as const;
 export const IMAGE_OUTPUT_FORMATS = ["png", "jpg", "jpeg", "webp"] as const;
 
 export const SUBTITLE_ANIMATIONS = [
-  "normal", "none", "one-word", "karaoke", "progressive", "highlight",
-  "fill", "pop", "bounce", "fade", "slide", "typewriter",
+  "normal",
+  "none",
+  "one-word",
+  "karaoke",
+  "progressive",
+  "highlight",
+  "fill",
+  "pop",
+  "bounce",
+  "fade",
+  "slide",
+  "typewriter",
 ] as const;
 
 export const SUBTITLE_POSITIONS = [
-  "top-left", "top-center", "top-right",
-  "bottom-left", "bottom-center", "bottom-right",
-  "center-center", "center-left", "center-right",
+  "top-left",
+  "top-center",
+  "top-right",
+  "bottom-left",
+  "bottom-center",
+  "bottom-right",
+  "center-center",
+  "center-left",
+  "center-right",
 ] as const;
 
 /** v2 subtitle position additionally accepts the shorthand rows. */
-export const SUBTITLE_POSITIONS_V2 = [...SUBTITLE_POSITIONS, "top", "center", "bottom"] as const;
+export const SUBTITLE_POSITIONS_V2 = [
+  ...SUBTITLE_POSITIONS,
+  "top",
+  "center",
+  "bottom",
+] as const;
 
 export const SLIDE_DIRECTIONS = ["up", "down", "left", "right"] as const;
-export const TEXT_TRANSFORMS = ["uppercase", "lowercase", "capitalize"] as const;
+export const TEXT_TRANSFORMS = [
+  "uppercase",
+  "lowercase",
+  "capitalize",
+] as const;
 
 export const WEBHOOK_EVENTS = ["render.completed", "render.failed"] as const;
 
@@ -176,49 +264,106 @@ const URL_CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
 
 // HTML allowed inside TEXT.html (anything else is rejected by the backend)
 export const TEXT_HTML_ALLOWED_TAGS = [
-  "b", "strong", "i", "em", "u", "s", "br", "span", "div", "p",
-  "ul", "ol", "li", "img", "canvas", "svg",
+  "b",
+  "strong",
+  "i",
+  "em",
+  "u",
+  "s",
+  "br",
+  "span",
+  "div",
+  "p",
+  "ul",
+  "ol",
+  "li",
+  "img",
+  "canvas",
+  "svg",
   // svg-subtree geometry elements
-  "g", "defs", "lineargradient", "radialgradient", "stop",
-  "path", "circle", "ellipse", "rect", "polygon", "polyline", "line",
+  "g",
+  "defs",
+  "lineargradient",
+  "radialgradient",
+  "stop",
+  "path",
+  "circle",
+  "ellipse",
+  "rect",
+  "polygon",
+  "polyline",
+  "line",
 ] as const;
 
 export const SVG_FORBIDDEN_TAGS = [
-  "script", "foreignObject", "iframe", "object", "embed", "audio", "video",
+  "script",
+  "foreignObject",
+  "iframe",
+  "object",
+  "embed",
+  "audio",
+  "video",
 ] as const;
 
 // customCode denylists (mirror of CUSTOM_CODE_FORBIDDEN_JS / _CSS)
 const CUSTOM_CODE_FORBIDDEN_JS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\bfetch\s*\(/, reason: "network access (fetch)" },
-  { pattern: /\b(self|window|globalThis|frames|top|parent)\s*\[/, reason: "computed access to the global object (blocklist bypass)" },
+  {
+    pattern: /\b(self|window|globalThis|frames|top|parent)\s*\[/,
+    reason: "computed access to the global object (blocklist bypass)",
+  },
   { pattern: /\bXMLHttpRequest\b/, reason: "network access (XMLHttpRequest)" },
   { pattern: /\bWebSocket\b/, reason: "network access (WebSocket)" },
   { pattern: /\bEventSource\b/, reason: "network access (EventSource)" },
   { pattern: /\bsendBeacon\b/, reason: "network access (sendBeacon)" },
   { pattern: /\bwebkitRequestFileSystem\b/, reason: "filesystem access" },
-  { pattern: /\bshowOpenFilePicker\b|\bshowSaveFilePicker\b/, reason: "filesystem access" },
+  {
+    pattern: /\bshowOpenFilePicker\b|\bshowSaveFilePicker\b/,
+    reason: "filesystem access",
+  },
   { pattern: /\bimportScripts\b/, reason: "remote script loading" },
   { pattern: /\bimport\s*\(/, reason: "dynamic module loading" },
   { pattern: /^\s*import\b/m, reason: "module loading" },
   { pattern: /\brequire\s*\(/, reason: "module loading" },
   { pattern: /\beval\s*\(/, reason: "dynamic code execution (eval)" },
-  { pattern: /\bnew\s+Function\b|\bFunction\s*\(/, reason: "dynamic code execution (Function)" },
-  { pattern: /\bsetTimeout\s*\(\s*['"`]|\bsetInterval\s*\(\s*['"`]/, reason: "dynamic code execution (string timer)" },
+  {
+    pattern: /\bnew\s+Function\b|\bFunction\s*\(/,
+    reason: "dynamic code execution (Function)",
+  },
+  {
+    pattern: /\bsetTimeout\s*\(\s*['"`]|\bsetInterval\s*\(\s*['"`]/,
+    reason: "dynamic code execution (string timer)",
+  },
   { pattern: /\bdocument\s*\.\s*cookie\b/, reason: "cookie access" },
   { pattern: /\blocalStorage\b|\bsessionStorage\b/, reason: "storage access" },
-  { pattern: /\bindexedDB\b|\bopenDatabase\b|\bcaches\b/, reason: "storage access" },
+  {
+    pattern: /\bindexedDB\b|\bopenDatabase\b|\bcaches\b/,
+    reason: "storage access",
+  },
   { pattern: /\bserviceWorker\b/, reason: "service worker registration" },
   { pattern: /\bSharedWorker\b|\bnew\s+Worker\b/, reason: "worker creation" },
   { pattern: /\bwindow\s*\.\s*open\b/, reason: "window creation" },
-  { pattern: /\blocation\s*(=|\.\s*(href|assign|replace|reload))/, reason: "navigation" },
+  {
+    pattern: /\blocation\s*(=|\.\s*(href|assign|replace|reload))/,
+    reason: "navigation",
+  },
   { pattern: /\bdocument\s*\.\s*write\b/, reason: "document rewriting" },
 ];
 
 const CUSTOM_CODE_FORBIDDEN_CSS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /@import\b/i, reason: "external stylesheet loading (@import)" },
-  { pattern: /\burl\(\s*['"]?\s*(?!data:)[a-z][a-z0-9+.-]*:/i, reason: "external resource loading (url() with a non-data: scheme)" },
-  { pattern: /\burl\(\s*['"]?\s*\/\//i, reason: "external resource loading (protocol-relative url())" },
-  { pattern: /expression\s*\(/i, reason: "dynamic code execution (expression)" },
+  {
+    pattern: /\burl\(\s*['"]?\s*(?!data:)[a-z][a-z0-9+.-]*:/i,
+    reason: "external resource loading (url() with a non-data: scheme)",
+  },
+  {
+    pattern: /\burl\(\s*['"]?\s*\/\//i,
+    reason: "external resource loading (protocol-relative url())",
+  },
+  {
+    pattern: /expression\s*\(/i,
+    reason: "dynamic code execution (expression)",
+  },
   { pattern: /-moz-binding\b/i, reason: "script binding" },
   { pattern: /javascript\s*:/i, reason: "javascript: URL" },
   { pattern: /<\/?\s*(script|style)\b/i, reason: "HTML injection" },
@@ -264,7 +409,12 @@ function hexColorSchema(description: string, withAlpha = false): JsonSchema {
   };
 }
 
-function num(min: number | undefined, max: number | undefined, description?: string, extra?: JsonSchema): JsonSchema {
+function num(
+  min: number | undefined,
+  max: number | undefined,
+  description?: string,
+  extra?: JsonSchema,
+): JsonSchema {
   const s: JsonSchema = { type: "number" };
   if (min !== undefined) s.minimum = min;
   if (max !== undefined) s.maximum = max;
@@ -272,35 +422,99 @@ function num(min: number | undefined, max: number | undefined, description?: str
   return { ...s, ...extra };
 }
 
-function int(min: number | undefined, max: number | undefined, description?: string, extra?: JsonSchema): JsonSchema {
+function int(
+  min: number | undefined,
+  max: number | undefined,
+  description?: string,
+  extra?: JsonSchema,
+): JsonSchema {
   return { ...num(min, max, description, extra), type: "integer" };
 }
 
 /** Case-insensitive pattern for a visual `type` value (backend accepts any case). */
 function ciTypePattern(t: string): string {
-  return "^" + t.split("").map((c) => `[${c.toUpperCase()}${c.toLowerCase()}]`).join("") + "$";
+  return (
+    "^" +
+    t
+      .split("")
+      .map((c) => `[${c.toUpperCase()}${c.toLowerCase()}]`)
+      .join("") +
+    "$"
+  );
 }
 
-function buildVisualBaseProperties(limits: PlanLimits): Record<string, JsonSchema> {
+function buildVisualBaseProperties(
+  limits: PlanLimits,
+): Record<string, JsonSchema> {
   return {
-    x: num(undefined, limits.maxInputResolution, 'Anchor-point X in canvas px (may be negative). ONLY used when position is "custom" — every other preset OVERWRITES x/y.'),
-    y: num(undefined, limits.maxInputResolution, 'Anchor-point Y in canvas px (may be negative). ONLY used when position is "custom" — every other preset OVERWRITES x/y.'),
-    width: num(1, limits.maxInputResolution, "Element width in px (plan-limited)."),
-    height: num(1, limits.maxInputResolution, "Element height in px (plan-limited)."),
-    position: { enum: [...POSITION_PRESETS], description: 'Placement preset. Sets BOTH the canvas point AND the default anchor (e.g. "bottom-center" puts the element\'s bottom edge flush with the frame bottom — no margin). x/y are IGNORED unless "custom". Two elements with the same preset render exactly stacked.' },
-    anchor: { enum: [...ANCHORS], description: 'Which point of the ELEMENT sits at the position point. Defaults to the position preset itself ("custom" defaults to top-left).' },
-    resize: { enum: [...RESIZE_MODES], description: "How media fills its box: contain (letterbox) or cover (crop)." },
-    enterBegin: num(0, limits.maxOutputResolution, "Seconds when the element starts appearing (enter animation start)."),
-    enterEnd: num(0, limits.maxOutputResolution, "Seconds when the enter animation finishes. Must be >= enterBegin."),
-    exitBegin: num(0, limits.maxOutputResolution, "Seconds when the exit animation starts."),
-    exitEnd: num(0, limits.maxOutputResolution, "Seconds when the element is fully gone. Must be >= exitBegin."),
+    x: num(
+      undefined,
+      limits.maxInputResolution,
+      'Anchor-point X in canvas px (may be negative). ONLY used when position is "custom" — every other preset OVERWRITES x/y.',
+    ),
+    y: num(
+      undefined,
+      limits.maxInputResolution,
+      'Anchor-point Y in canvas px (may be negative). ONLY used when position is "custom" — every other preset OVERWRITES x/y.',
+    ),
+    width: num(
+      1,
+      limits.maxInputResolution,
+      "Element width in px (plan-limited).",
+    ),
+    height: num(
+      1,
+      limits.maxInputResolution,
+      "Element height in px (plan-limited).",
+    ),
+    position: {
+      enum: [...POSITION_PRESETS],
+      description:
+        'Placement preset. Sets BOTH the canvas point AND the default anchor (e.g. "bottom-center" puts the element\'s bottom edge flush with the frame bottom — no margin). x/y are IGNORED unless "custom". Two elements with the same preset render exactly stacked.',
+    },
+    anchor: {
+      enum: [...ANCHORS],
+      description:
+        'Which point of the ELEMENT sits at the position point. Defaults to the position preset itself ("custom" defaults to top-left).',
+    },
+    resize: {
+      enum: [...RESIZE_MODES],
+      description:
+        "How media fills its box: contain (letterbox) or cover (crop).",
+    },
+    enterBegin: num(
+      0,
+      limits.maxOutputResolution,
+      "Seconds when the element starts appearing (enter animation start).",
+    ),
+    enterEnd: num(
+      0,
+      limits.maxOutputResolution,
+      "Seconds when the enter animation finishes. Must be >= enterBegin.",
+    ),
+    exitBegin: num(
+      0,
+      limits.maxOutputResolution,
+      "Seconds when the exit animation starts.",
+    ),
+    exitEnd: num(
+      0,
+      limits.maxOutputResolution,
+      "Seconds when the element is fully gone. Must be >= exitBegin.",
+    ),
     opacity: num(0, 1, "Element opacity, 0..1."),
     angle: num(-360, 360, "Rotation in degrees."),
     flipV: { type: "boolean", description: "Flip vertically." },
     flipH: { type: "boolean", description: "Flip horizontally." },
     track: int(0, 1_000_000, "Z-order track; higher tracks render on top."),
-    enterAnimation: { anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }], description: "Enter animation effect (xfade family) or null." },
-    exitAnimation: { anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }], description: "Exit animation effect (xfade family) or null." },
+    enterAnimation: {
+      anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }],
+      description: "Enter animation effect (xfade family) or null.",
+    },
+    exitAnimation: {
+      anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }],
+      description: "Exit animation effect (xfade family) or null.",
+    },
   };
 }
 
@@ -355,7 +569,8 @@ function buildMediaSharedDefs(limits: PlanLimits): Record<string, JsonSchema> {
       additionalProperties: false,
     },
     zoom: {
-      description: 'Ken Burns zoom: true (default 1.2x depth) or { "depth": 1..10 }.',
+      description:
+        'Ken Burns zoom: true (default 1.2x depth) or { "depth": 1..10 }.',
       anyOf: [
         { type: "boolean" },
         {
@@ -393,7 +608,9 @@ function buildMediaSharedDefs(limits: PlanLimits): Record<string, JsonSchema> {
  * Build the JSON Schema (draft 2020-12) for a Zvid project payload — the
  * object accepted as `payload` by POST /api/render[(/image)]/api-key.
  */
-export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): JsonSchema {
+export function buildProjectJsonSchema(
+  limits: PlanLimits = DEFAULT_LIMITS,
+): JsonSchema {
   const base = buildVisualBaseProperties(limits);
   const media = buildMediaSharedDefs(limits);
 
@@ -413,7 +630,11 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     title: "IMAGE element",
     description: "A raster image placed on the canvas.",
     properties: {
-      type: { type: "string", pattern: ciTypePattern("image"), description: '"IMAGE" (case-insensitive).' },
+      type: {
+        type: "string",
+        pattern: ciTypePattern("image"),
+        description: '"IMAGE" (case-insensitive).',
+      },
       ...base,
       ...imageLike,
     },
@@ -426,7 +647,11 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     title: "GIF element",
     description: "An animated GIF placed on the canvas (video projects only).",
     properties: {
-      type: { type: "string", pattern: ciTypePattern("gif"), description: '"GIF" (case-insensitive).' },
+      type: {
+        type: "string",
+        pattern: ciTypePattern("gif"),
+        description: '"GIF" (case-insensitive).',
+      },
       ...base,
       ...imageLike,
     },
@@ -439,20 +664,55 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     title: "VIDEO element",
     description: "A video clip placed on the canvas (video projects only).",
     properties: {
-      type: { type: "string", pattern: ciTypePattern("video"), description: '"VIDEO" (case-insensitive).' },
+      type: {
+        type: "string",
+        pattern: ciTypePattern("video"),
+        description: '"VIDEO" (case-insensitive).',
+      },
       ...base,
       ...imageLike,
-      videoBegin: num(0, limits.maxDuration, "Trim: source time (s) where playback starts."),
-      videoEnd: num(0, limits.maxDuration, "Trim: source time (s) where playback ends."),
-      videoDuration: num(0.1, limits.maxDuration, "Play only this many seconds of the source."),
+      videoBegin: num(
+        0,
+        limits.maxDuration,
+        "Trim: source time (s) where playback starts.",
+      ),
+      videoEnd: num(
+        0,
+        limits.maxDuration,
+        "Trim: source time (s) where playback ends.",
+      ),
+      videoDuration: num(
+        0.1,
+        limits.maxDuration,
+        "Play only this many seconds of the source.",
+      ),
       volume: num(0, 1, "Clip audio volume, 0..1."),
       speed: num(0.1, 10, "Playback speed multiplier, 0.1..10."),
-      transition: { anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }], description: "Transition into the linked clip (see transitionId)." },
-      transitionDuration: num(0, limits.maxOutputResolution, "Transition length in seconds."),
-      transitionId: { type: "string", pattern: ID_REGEX.source, maxLength: MAX_ID_LEN, description: "id of the clip this transition links to." },
+      transition: {
+        anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }],
+        description: "Transition into the linked clip (see transitionId).",
+      },
+      transitionDuration: num(
+        0,
+        limits.maxOutputResolution,
+        "Transition length in seconds.",
+      ),
+      transitionId: {
+        type: "string",
+        pattern: ID_REGEX.source,
+        maxLength: MAX_ID_LEN,
+        description: "id of the clip this transition links to.",
+      },
       frameRate: int(1, 60, "Override source frame rate (1..60)."),
-      id: { type: "string", pattern: ID_REGEX.source, description: "Clip id (referenced by transitionId)." },
-      hasAudio: { type: "boolean", description: "Hint that the source has an audio stream." },
+      id: {
+        type: "string",
+        pattern: ID_REGEX.source,
+        description: "Clip id (referenced by transitionId).",
+      },
+      hasAudio: {
+        type: "boolean",
+        description: "Hint that the source has an audio stream.",
+      },
     },
     required: ["type", "src"],
     additionalProperties: false,
@@ -463,7 +723,11 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     title: "SVG element",
     description: "Inline SVG markup drawn on the canvas.",
     properties: {
-      type: { type: "string", pattern: ciTypePattern("svg"), description: '"SVG" (case-insensitive).' },
+      type: {
+        type: "string",
+        pattern: ciTypePattern("svg"),
+        description: '"SVG" (case-insensitive).',
+      },
       ...base,
       svg: {
         type: "string",
@@ -489,12 +753,17 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     description:
       "Styled text. Provide plain `text` (no < or > characters) and/or limited `html`. At least one of text/html must be non-empty.",
     properties: {
-      type: { type: "string", pattern: ciTypePattern("text"), description: '"TEXT" (case-insensitive).' },
+      type: {
+        type: "string",
+        pattern: ciTypePattern("text"),
+        description: '"TEXT" (case-insensitive).',
+      },
       ...base,
       text: {
         type: "string",
         maxLength: MAX_TEXT_LEN,
-        description: "Plain text content. HTML markup (< or >) is rejected — use `html` for markup.",
+        description:
+          "Plain text content. HTML markup (< or >) is rejected — use `html` for markup.",
       },
       html: {
         type: "string",
@@ -522,16 +791,37 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
   const audioItem: JsonSchema = {
     type: "object",
     title: "Audio item",
-    description: "A soundtrack / voice-over entry for `audios` (video projects only).",
+    description:
+      "A soundtrack / voice-over entry for `audios` (video projects only).",
     properties: {
       src: urlSchema("Audio file URL (mp3/wav/...)."),
-      enter: num(0, limits.maxOutputResolution, "Timeline second the audio starts playing."),
-      exit: num(0, limits.maxOutputResolution, "Timeline second the audio stops. Must be >= enter."),
+      enter: num(
+        0,
+        limits.maxOutputResolution,
+        "Timeline second the audio starts playing.",
+      ),
+      exit: num(
+        0,
+        limits.maxOutputResolution,
+        "Timeline second the audio stops. Must be >= enter.",
+      ),
       volume: num(0, 1),
       speed: num(0.1, 10),
-      audioBegin: num(0, limits.maxDuration, "Trim: source second where playback starts."),
-      audioEnd: num(0, limits.maxDuration, "Trim: source second where playback ends. Must be >= audioBegin."),
-      audioDuration: num(0, limits.maxDuration, "Play only this many seconds of the source."),
+      audioBegin: num(
+        0,
+        limits.maxDuration,
+        "Trim: source second where playback starts.",
+      ),
+      audioEnd: num(
+        0,
+        limits.maxDuration,
+        "Trim: source second where playback ends. Must be >= audioBegin.",
+      ),
+      audioDuration: num(
+        0,
+        limits.maxDuration,
+        "Play only this many seconds of the source.",
+      ),
     },
     additionalProperties: false,
   };
@@ -539,7 +829,11 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
   const subtitleCaption: JsonSchema = {
     type: "object",
     properties: {
-      start: num(0, limits.maxInputResolution, "Caption start time in seconds."),
+      start: num(
+        0,
+        limits.maxInputResolution,
+        "Caption start time in seconds.",
+      ),
       end: num(0, limits.maxInputResolution, "Caption end time in seconds."),
       text: { type: "string", minLength: 1, maxLength: MAX_SUBTITLE_TEXT_LEN },
       words: {
@@ -550,12 +844,17 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
           properties: {
             start: num(0, limits.maxInputResolution),
             end: num(0, limits.maxInputResolution),
-            text: { type: "string", minLength: 1, maxLength: MAX_SUBTITLE_WORD_LEN },
+            text: {
+              type: "string",
+              minLength: 1,
+              maxLength: MAX_SUBTITLE_WORD_LEN,
+            },
           },
           required: ["start", "end", "text"],
           additionalProperties: false,
         },
-        description: "Per-word timings; auto-distributed from `text` when omitted.",
+        description:
+          "Per-word timings; auto-distributed from `text` when omitted.",
       },
     },
     required: ["start", "end"],
@@ -570,15 +869,34 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
       "Burned-in subtitles. Content: EXACTLY ONE of `src` (SRT/VTT URL) or `captions`. Style: v2 flat keys (animation/font/stroke/background/...) OR the legacy `styles` block — not both.",
     properties: {
       src: urlSchema("SRT or VTT file URL."),
-      captions: { type: "array", minItems: 1, items: subtitleCaption, description: "Inline captions (plan-limited count)." },
-      maxWordsPerLine: int(1, 20, "Re-chunk captions to at most N words per line."),
-      animation: { enum: [...SUBTITLE_ANIMATIONS], description: "Caption animation mode." },
-      direction: { enum: [...SLIDE_DIRECTIONS], description: 'Slide direction when animation is "slide".' },
+      captions: {
+        type: "array",
+        minItems: 1,
+        items: subtitleCaption,
+        description: "Inline captions (plan-limited count).",
+      },
+      maxWordsPerLine: int(
+        1,
+        20,
+        "Re-chunk captions to at most N words per line.",
+      ),
+      animation: {
+        enum: [...SUBTITLE_ANIMATIONS],
+        description: "Caption animation mode.",
+      },
+      direction: {
+        enum: [...SLIDE_DIRECTIONS],
+        description: 'Slide direction when animation is "slide".',
+      },
       font: {
         type: "object",
         minProperties: 1,
         properties: {
-          family: { type: "string", pattern: NAME_REGEX.source, maxLength: MAX_NAME_LEN },
+          family: {
+            type: "string",
+            pattern: NAME_REGEX.source,
+            maxLength: MAX_NAME_LEN,
+          },
           size: num(1, MAX_FONT_SIZE),
           color: hexColorSchema("#rrggbb or #rrggbbaa", true),
           bold: { type: "boolean" },
@@ -630,7 +948,8 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
       },
       styles: {
         type: "object",
-        description: "LEGACY style block — prefer the flat v2 keys. Cannot be combined with them.",
+        description:
+          "LEGACY style block — prefer the flat v2 keys. Cannot be combined with them.",
         properties: {
           color: hexColorSchema("#rrggbb or #rrggbbaa", true),
           background: hexColorSchema("#rrggbb or #rrggbbaa", true),
@@ -639,7 +958,11 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
           isBold: { type: "boolean" },
           isItalic: { type: "boolean" },
           fontSize: num(1, MAX_FONT_SIZE),
-          fontFamily: { type: "string", pattern: NAME_REGEX.source, maxLength: MAX_NAME_LEN },
+          fontFamily: {
+            type: "string",
+            pattern: NAME_REGEX.source,
+            maxLength: MAX_NAME_LEN,
+          },
           textTransform: { enum: [...TEXT_TRANSFORMS] },
           outline: {
             type: "object",
@@ -677,8 +1000,14 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     dependentSchemas: {
       styles: {
         properties: {
-          animation: false, direction: false, font: false, stroke: false,
-          background: false, activeWord: false, position: false, margin: false,
+          animation: false,
+          direction: false,
+          font: false,
+          stroke: false,
+          background: false,
+          activeWord: false,
+          position: false,
+          margin: false,
         },
       },
     },
@@ -692,12 +1021,25 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     properties: {
       id: { type: "string", pattern: ID_REGEX.source, maxLength: MAX_ID_LEN },
       duration: {
-        description: "Seconds; -1 (or omitted) auto-computes from the scene's content.",
+        description:
+          "Seconds; -1 (or omitted) auto-computes from the scene's content.",
         anyOf: [{ const: -1 }, num(0.1, limits.maxDuration)],
       },
-      transition: { anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }], description: "Transition into the next scene." },
-      transitionId: { anyOf: [{ type: "string", pattern: ID_REGEX.source, maxLength: MAX_ID_LEN }, { type: "null" }] },
-      transitionDuration: num(0, 60, "Transition overlap in seconds (default 0.5)."),
+      transition: {
+        anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }],
+        description: "Transition into the next scene.",
+      },
+      transitionId: {
+        anyOf: [
+          { type: "string", pattern: ID_REGEX.source, maxLength: MAX_ID_LEN },
+          { type: "null" },
+        ],
+      },
+      transitionDuration: num(
+        0,
+        60,
+        "Transition overlap in seconds (default 0.5).",
+      ),
       backgroundColor: hexColorSchema("Scene background (#rgb or #rrggbb)."),
       visuals: { type: "array", items: { $ref: "#/$defs/visual" } },
       audios: { type: "array", items: { $ref: "#/$defs/audioItem" } },
@@ -714,25 +1056,87 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
       "Cross-field rules that JSON Schema cannot express are listed in the companion validation notes.",
     type: "object",
     properties: {
-      type: { enum: ["video", "image"], default: "video", description: 'Render type. "image" produces a still (png/jpg/webp) and forbids all time-domain fields.' },
-      name: { type: "string", pattern: NAME_REGEX.source, maxLength: MAX_NAME_LEN, default: "unnamed", description: "Output name. Letters, digits, space, _ and - ONLY (no punctuation)." },
-      resolution: { enum: [...RESOLUTION_PRESETS], description: 'Canvas preset. Any value except "custom" OVERRIDES width/height.' },
-      width: int(1, limits.maxOutputResolution, "Canvas width in px (plan-limited).", { default: 1280 }),
-      height: int(1, limits.maxOutputResolution, "Canvas height in px (plan-limited).", { default: 720 }),
-      duration: num(0.1, limits.maxDuration, "Video length in seconds (plan-limited). Ignored/auto-computed when every scene has an explicit duration.", { default: 10 }),
+      type: {
+        enum: ["video", "image"],
+        default: "video",
+        description:
+          'Render type. "image" produces a still (png/jpg/webp) and forbids all time-domain fields.',
+      },
+      name: {
+        type: "string",
+        pattern: NAME_REGEX.source,
+        maxLength: MAX_NAME_LEN,
+        default: "unnamed",
+        description:
+          "Output name. Letters, digits, space, _ and - ONLY (no punctuation).",
+      },
+      resolution: {
+        enum: [...RESOLUTION_PRESETS],
+        description:
+          'Canvas preset. Any value except "custom" OVERRIDES width/height.',
+      },
+      width: int(
+        1,
+        limits.maxOutputResolution,
+        "Canvas width in px (plan-limited).",
+        { default: 1280 },
+      ),
+      height: int(
+        1,
+        limits.maxOutputResolution,
+        "Canvas height in px (plan-limited).",
+        { default: 720 },
+      ),
+      duration: num(
+        0.1,
+        limits.maxDuration,
+        "Video length in seconds (plan-limited). Ignored/auto-computed when every scene has an explicit duration.",
+        { default: 10 },
+      ),
       frameRate: int(1, 60, "Frames per second.", { default: 30 }),
       outputFormat: {
         type: "string",
         enum: [...VIDEO_OUTPUT_FORMATS, ...IMAGE_OUTPUT_FORMATS],
-        description: 'Videos: mp4 (default), mov, avi, webm. Images (type: "image"): png (default), jpg, jpeg, webp.',
+        description:
+          'Videos: mp4 (default), mov, avi, webm. Images (type: "image"): png (default), jpg, jpeg, webp.',
       },
-      backgroundColor: { ...hexColorSchema("Canvas background color."), default: "#ffffff" },
-      snapshotTime: num(0, 3600, 'Image renders only: second of the (virtual) timeline to snapshot.'),
-      quality: int(1, 100, "Image renders only: jpg/webp quality (NOT valid for png)."),
-      transparent: { type: "boolean", description: "Image renders only: transparent background (png/webp only, not jpg)." },
-      visuals: { type: "array", items: { $ref: "#/$defs/visual" }, description: "Elements shown for the whole project (outside scenes)." },
-      audios: { type: "array", items: { $ref: "#/$defs/audioItem" }, description: "Project-level audio tracks (video only, plan-limited count)." },
-      scenes: { type: "array", maxItems: limits.maxScenes, items: { $ref: "#/$defs/scene" }, description: "Sequential timeline segments (video only, plan-limited count)." },
+      backgroundColor: {
+        ...hexColorSchema("Canvas background color."),
+        default: "#ffffff",
+      },
+      snapshotTime: num(
+        0,
+        3600,
+        "Image renders only: second of the (virtual) timeline to snapshot.",
+      ),
+      quality: int(
+        1,
+        100,
+        "Image renders only: jpg/webp quality (NOT valid for png).",
+      ),
+      transparent: {
+        type: "boolean",
+        description:
+          "Image renders only: transparent background (png/webp only, not jpg).",
+      },
+      visuals: {
+        type: "array",
+        items: { $ref: "#/$defs/visual" },
+        description: "Elements shown for the whole project (outside scenes).",
+      },
+      audios: {
+        type: "array",
+        items: { $ref: "#/$defs/audioItem" },
+        description:
+          "Project-level audio tracks (video only, plan-limited count).",
+      },
+      scenes: {
+        type: "array",
+        maxItems: limits.maxScenes,
+        items: { $ref: "#/$defs/scene" },
+        description:
+          "Sequential timeline segments (video only, plan-limited count).",
+      },
       thumbnail: urlSchema("Custom thumbnail image URL (video only)."),
       subtitle: { $ref: "#/$defs/subtitle" },
     },
@@ -764,7 +1168,8 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
     $defs: {
       visual: {
         title: "Visual element",
-        description: "One canvas element, discriminated by `type` (IMAGE | VIDEO | GIF | SVG | TEXT, case-insensitive).",
+        description:
+          "One canvas element, discriminated by `type` (IMAGE | VIDEO | GIF | SVG | TEXT, case-insensitive).",
         type: "object",
         required: ["type"],
         oneOf: [
@@ -793,7 +1198,9 @@ export function buildProjectJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): Jso
  * POST /api/render/api-key (and the /image, /validate variants):
  * either { payload } or { template, variables }, plus overrides/webhookUrl.
  */
-export function buildRenderRequestJsonSchema(limits: PlanLimits = DEFAULT_LIMITS): JsonSchema {
+export function buildRenderRequestJsonSchema(
+  limits: PlanLimits = DEFAULT_LIMITS,
+): JsonSchema {
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: "https://zvid.io/schemas/render-request.json",
@@ -809,15 +1216,18 @@ export function buildRenderRequestJsonSchema(limits: PlanLimits = DEFAULT_LIMITS
       template: {
         type: "string",
         pattern: TEMPLATE_ID_REGEX.source,
-        description: 'Stored template id, "tpl_" + 20 alphanumerics. Variables are resolved server-side BEFORE validation.',
+        description:
+          'Stored template id, "tpl_" + 20 alphanumerics. Variables are resolved server-side BEFORE validation.',
       },
       variables: {
         type: "object",
-        description: "Template variable values keyed by variable name (template renders only).",
+        description:
+          "Template variable values keyed by variable name (template renders only).",
       },
       overrides: {
         type: "object",
-        description: "Output overrides applied on top of the payload/template. width/height force resolution to \"custom\".",
+        description:
+          'Output overrides applied on top of the payload/template. width/height force resolution to "custom".',
         properties: {
           resolution: { enum: [...RESOLUTION_PRESETS] },
           width: int(1, limits.maxOutputResolution),
@@ -832,13 +1242,18 @@ export function buildRenderRequestJsonSchema(limits: PlanLimits = DEFAULT_LIMITS
         },
         additionalProperties: false,
       },
-      jobId: { type: "string", format: "uuid", description: "Optional idempotency/job id (UUID)." },
+      jobId: {
+        type: "string",
+        format: "uuid",
+        description: "Optional idempotency/job id (UUID).",
+      },
       clientKey: { type: "string" },
       webhookUrl: {
         type: "string",
         maxLength: MAX_URL_LEN,
         pattern: "^https?://",
-        description: "Per-job webhook notified on render.completed / render.failed (HMAC-SHA256 signed).",
+        description:
+          "Per-job webhook notified on render.completed / render.failed (HMAC-SHA256 signed).",
       },
     },
     additionalProperties: false,
@@ -858,7 +1273,7 @@ export const VALIDATION_NOTES: string[] = [
   "Timing cross-checks: enterEnd >= enterBegin and exitEnd >= exitBegin on every visual; exit >= enter and audioEnd >= audioBegin on every audio item.",
   "Element counts are summed across top-level `visuals` AND all `scenes[].visuals` (same for audios) before checking plan maxima.",
   'Image projects (type: "image") forbid: duration, frameRate, audios, scenes, thumbnail, subtitle; VIDEO/GIF elements; and per-element timing fields (enterBegin/enterEnd/exitBegin/exitEnd, videoBegin/videoEnd/videoDuration, transition/transitionId/transitionDuration).',
-  'Image format rules: `transparent: true` is invalid with jpg/jpeg output; `quality` is invalid with png (jpg/webp only).',
+  "Image format rules: `transparent: true` is invalid with jpg/jpeg output; `quality` is invalid with png (jpg/webp only).",
   'If `resolution` is set to any preset except "custom", width and height are IGNORED (the preset wins).',
   "When EVERY scene has an explicit duration > 0, the total (sum minus xfade transition overlaps, default overlap 0.5s) must not exceed the plan's maxDuration; the project `duration` is then auto-set to that total.",
   "A scene's `transition` only applies when the scene is not last and `transitionId` is omitted/null/'none'/equal to the next scene's id; otherwise it's a hard cut.",
@@ -866,8 +1281,8 @@ export const VALIDATION_NOTES: string[] = [
   "URL fields (src, thumbnail, subtitle.src) are SSRF-checked: public http(s) only, max 2048 chars, no user:pass@, explicit ports other than 80/443 rejected, localhost/.local/.localhost and private/link-local IP literals rejected. DNS is re-checked at fetch time, so a URL that validates can still fail to download.",
   "webhookUrl gets a deeper SSRF check at delivery registration time (utils/safeUrl.js).",
   "Unknown fields are STRIPPED silently by the backend (Joi stripUnknown), not rejected. This schema sets additionalProperties: false to keep generators honest — an unknown key means the field will be IGNORED by the renderer.",
-  "The HTTP layer coerces types (Joi convert: true): numeric strings like \"10\" are accepted for numbers. Don't rely on it — send real JSON numbers.",
-  "SVG strings are sanitized by denylist: no script/foreignObject/iframe/object/embed/audio/video tags, no on* attributes, no external url()/href/src (only url(#id) / \"#id\"), no data: URIs, dimensions and viewBox <= 4096, no integers with 8 or more digits anywhere.",
+  'The HTTP layer coerces types (Joi convert: true): numeric strings like "10" are accepted for numbers. Don\'t rely on it — send real JSON numbers.',
+  'SVG strings are sanitized by denylist: no script/foreignObject/iframe/object/embed/audio/video tags, no on* attributes, no external url()/href/src (only url(#id) / "#id"), no data: URIs, dimensions and viewBox <= 4096, no integers with 8 or more digits anywhere.',
   "TEXT.html is parsed and validated: only the allowed tag/attribute set survives; inline style attributes and the `style` object are scanned for url(), @import, image-set(), expression(), behavior:, -moz-binding and CSS comments — all rejected.",
   "customCode.js/.css are scanned against a denylist (network, storage, filesystem, navigation, dynamic code execution, worker creation...). customCode.animationDuration must be > 0 and <= 15 seconds.",
   "Template renders resolve variables/iterate/condition BEFORE validation; validation always runs on the resolved project. Use POST /api/templates/:id/preview (or the preview_template MCP tool) for a free dry run.",
@@ -891,8 +1306,8 @@ export const AUTHORING_GUIDELINES: string[] = [
   "ONE ELEMENT PER MESSAGE BLOCK: put a headline + subline INSIDE one TEXT element via `html` (two <p> tags styled inline) rather than two separately-positioned TEXT elements — the single block can never drift apart or overlap.",
   'CARDS / PILLS / BUTTONS: build them as ONE TEXT element — set the card size via width/height and put backgroundColor/borderRadius on `style` with display: "flex", alignItems: "center", justifyContent: "center" to center the label inside. Do NOT size cards with CSS padding (the renderer is box-sizing: content-box: padding grows the card beyond width/height and it gets cut off), and do NOT build a box in one element (SVG/IMAGE) with a separate TEXT floated on top — two-element stacks misalign.',
   "PREFER HTML OVER SVG: rectangles, pills, badges and cards should be TEXT elements with html/style (backgrounds, borderRadius, flex, gradients are all supported). Reserve SVG for genuine vector artwork (logos, icons, organic shapes) that HTML cannot express.",
-  "VERTICAL CENTERING: text renders at the TOP of its box by default. Add display: \"flex\", alignItems: \"center\", justifyContent: \"center\" (plus textAlign: \"center\") to any TEXT whose box is taller than the text.",
-  "CONTRAST: aim for WCAG-ish ≥ 4.5:1 between text color and what is actually behind it. Over photos/videos, first lay a scrim — a full-canvas TEXT element with html: \"<div></div>\" and style: { backgroundColor: \"rgba(2,6,23,0.55)\" } on a track between the media and the text — or put the text in a solid card. Light-blue-on-sky and white-on-white are the classic failures.",
+  'VERTICAL CENTERING: text renders at the TOP of its box by default. Add display: "flex", alignItems: "center", justifyContent: "center" (plus textAlign: "center") to any TEXT whose box is taller than the text.',
+  'CONTRAST: aim for WCAG-ish ≥ 4.5:1 between text color and what is actually behind it. Over photos/videos, first lay a scrim — a full-canvas TEXT element with html: "<div></div>" and style: { backgroundColor: "rgba(2,6,23,0.55)" } on a track between the media and the text — or put the text in a solid card. Light-blue-on-sky and white-on-white are the classic failures.',
   "TYPE SCALE: headline ≈ canvasHeight/9 px (e.g. 80px on 720p), subline ≈ half that, CTA label 28–36px. Keep any text block ≤ 80% of canvas width and ≤ 2 text elements visible at the same moment.",
   "SAFE TIMING: give enter animations 0.4–0.7s (enterEnd - enterBegin) and leave the last 0.5s of a scene animation-free so transitions don't fight element exits.",
   'FONTS: fontFamily loads from Google Fonts (default "Poppins"). Stick to 1–2 families per video; set the family on every text element for consistency.',
@@ -902,6 +1317,587 @@ export const AUTHORING_GUIDELINES: string[] = [
 // ---------------------------------------------------------------------------
 // Validator — mirrors backend verdicts with { field, message } errors
 // ---------------------------------------------------------------------------
+
+// Creative planning: template-driven, never template-only. The planner stops
+// at art direction; clients still compose, validate, and render normal Zvid
+// project JSON. This section stays dependency-free for MCP fallback use.
+
+export const VARIATION_MODES = ["consistent", "fresh", "explore"] as const;
+export type VariationMode = (typeof VARIATION_MODES)[number];
+
+export const CREATIVE_ASPECT_RATIOS = [
+  "16:9",
+  "9:16",
+  "1:1",
+  "4:5",
+  "custom",
+] as const;
+export type CreativeAspectRatio = (typeof CREATIVE_ASPECT_RATIOS)[number];
+
+export const CREATIVE_MOTION_INTENSITIES = [
+  "restrained",
+  "balanced",
+  "energetic",
+] as const;
+export type CreativeMotionIntensity =
+  (typeof CREATIVE_MOTION_INTENSITIES)[number];
+
+export interface CreativeStylePack {
+  id: string;
+  title: string;
+  description: string;
+  keywords: string[];
+  typography: string[];
+  transitionFamily: string[];
+  designQueries: string[];
+  canvasQueries: string[];
+  defaultMotion: CreativeMotionIntensity;
+}
+
+export const CREATIVE_STYLE_PACKS: CreativeStylePack[] = [
+  {
+    id: "adaptive-modern",
+    title: "Adaptive modern",
+    description:
+      "Clean contemporary composition that adapts to the subject without forcing a niche visual genre.",
+    keywords: [],
+    typography: ["Sora", "Inter"],
+    transitionFamily: ["fade", "smoothleft", "dissolve"],
+    designQueries: ["gradient hero", "lower third", "quote card"],
+    canvasQueries: ["gradient", "particles", "waves"],
+    defaultMotion: "balanced",
+  },
+  {
+    id: "modern-saas",
+    title: "Modern SaaS",
+    description:
+      "Product-led layouts with UI framing, precise callouts, gradient accents and confident kinetic type.",
+    keywords: [
+      "saas",
+      "software",
+      "app",
+      "platform",
+      "startup",
+      "developer",
+      "ai",
+      "technology",
+    ],
+    typography: ["Sora", "Inter"],
+    transitionFamily: ["smoothleft", "slideleft", "fade"],
+    designQueries: ["gradient hero", "terminal", "lower third"],
+    canvasQueries: ["grid", "particles", "gradient"],
+    defaultMotion: "balanced",
+  },
+  {
+    id: "bold-commerce",
+    title: "Bold commerce",
+    description:
+      "High-contrast promotional layouts with price emphasis, badges, product media and punchy CTAs.",
+    keywords: [
+      "sale",
+      "shop",
+      "store",
+      "ecommerce",
+      "product",
+      "discount",
+      "offer",
+      "launch",
+    ],
+    typography: ["Bebas Neue", "Inter"],
+    transitionFamily: ["slideleft", "circleopen", "fadefast"],
+    designQueries: ["sale", "sunburst", "sticker"],
+    canvasQueries: ["confetti", "rays", "burst"],
+    defaultMotion: "energetic",
+  },
+  {
+    id: "editorial-data",
+    title: "Editorial data",
+    description:
+      "Structured information design for metrics, reports, explainers and news-style narratives.",
+    keywords: [
+      "data",
+      "report",
+      "analytics",
+      "statistics",
+      "finance",
+      "news",
+      "update",
+      "results",
+    ],
+    typography: ["DM Sans", "Inter"],
+    transitionFamily: ["fade", "wipeleft", "smoothup"],
+    designQueries: ["metric", "quote", "lower third"],
+    canvasQueries: ["grid", "data", "network"],
+    defaultMotion: "restrained",
+  },
+  {
+    id: "social-kinetic",
+    title: "Social kinetic",
+    description:
+      "Fast, type-led vertical storytelling with punchy captions, rhythmic cuts and expressive motion.",
+    keywords: [
+      "social",
+      "reel",
+      "short",
+      "tiktok",
+      "creator",
+      "viral",
+      "announcement",
+    ],
+    typography: ["Anton", "Poppins"],
+    transitionFamily: ["slideup", "zoomin", "fadefast"],
+    designQueries: ["kinetic", "typewriter", "sparkle"],
+    canvasQueries: ["glitch", "confetti", "hyperspace"],
+    defaultMotion: "energetic",
+  },
+  {
+    id: "luxury-minimal",
+    title: "Luxury minimal",
+    description:
+      "Restrained premium art direction with generous whitespace, elegant typography and slow deliberate movement.",
+    keywords: [
+      "luxury",
+      "premium",
+      "elegant",
+      "minimal",
+      "fashion",
+      "jewelry",
+      "beauty",
+      "hotel",
+    ],
+    typography: ["Playfair Display", "Inter"],
+    transitionFamily: ["fade", "dissolve", "fadeslow"],
+    designQueries: ["minimal", "quote card", "elegant"],
+    canvasQueries: ["soft gradient", "bokeh", "light"],
+    defaultMotion: "restrained",
+  },
+];
+
+export interface CreativeSceneRecipe {
+  role: string;
+  goal: string;
+  layoutPatterns: string[];
+  mediaNeeds: string[];
+  weight: number;
+}
+
+export const CREATIVE_SCENE_RECIPES: CreativeSceneRecipe[] = [
+  {
+    role: "hook-cta",
+    goal: "Deliver one memorable promise and one action when only one scene is available.",
+    layoutPatterns: [
+      "type-led hero with integrated CTA",
+      "media hero with headline card",
+    ],
+    mediaNeeds: ["one strong subject or product visual", "logo"],
+    weight: 1,
+  },
+  {
+    role: "hook",
+    goal: "Earn attention immediately with the strongest promise, question or visual contrast.",
+    layoutPatterns: [
+      "type-led hero",
+      "full-bleed media plus scrim",
+      "asymmetric headline and subject",
+    ],
+    mediaNeeds: ["hero image or short video", "optional animated canvas"],
+    weight: 0.9,
+  },
+  {
+    role: "problem",
+    goal: "Make the audience recognize the problem before introducing the solution.",
+    layoutPatterns: [
+      "split before state",
+      "single pain-point statement",
+      "three compact problem cards",
+    ],
+    mediaNeeds: ["contextual stock media", "supporting icon or shape"],
+    weight: 1,
+  },
+  {
+    role: "value",
+    goal: "State the central benefit and show what changes for the viewer.",
+    layoutPatterns: [
+      "benefit headline plus proof line",
+      "media-first value card",
+      "before/after split",
+    ],
+    mediaNeeds: ["product or outcome visual", "one decorative design element"],
+    weight: 1.15,
+  },
+  {
+    role: "solution",
+    goal: "Demonstrate how the product, service or idea solves the stated problem.",
+    layoutPatterns: [
+      "product screenshot with callouts",
+      "three-step flow",
+      "feature spotlight",
+    ],
+    mediaNeeds: ["product footage or screenshots", "callout shapes"],
+    weight: 1.25,
+  },
+  {
+    role: "features",
+    goal: "Present a small scannable set of differentiators without turning the scene into a slide deck.",
+    layoutPatterns: [
+      "three-feature grid",
+      "staggered cards",
+      "one feature per beat",
+    ],
+    mediaNeeds: ["icons or shapes", "optional supporting media"],
+    weight: 1.2,
+  },
+  {
+    role: "proof",
+    goal: "Add credibility through a metric, testimonial, customer result or demonstration.",
+    layoutPatterns: ["large metric", "quote card", "logo or result strip"],
+    mediaNeeds: ["portrait, customer logo or evidence visual"],
+    weight: 1,
+  },
+  {
+    role: "brand",
+    goal: "Create an emotional brand beat before the final action.",
+    layoutPatterns: [
+      "logo plus positioning line",
+      "visual montage",
+      "minimal brand statement",
+    ],
+    mediaNeeds: ["logo", "brand-relevant media"],
+    weight: 0.8,
+  },
+  {
+    role: "cta",
+    goal: "Close with one unambiguous action, destination and brand reminder.",
+    layoutPatterns: [
+      "centered CTA card",
+      "product plus CTA",
+      "minimal logo end card",
+    ],
+    mediaNeeds: ["logo", "optional product visual"],
+    weight: 0.85,
+  },
+];
+
+export const CREATIVE_WORKFLOW = {
+  principle:
+    "Template-driven, never template-only: curated work supplies design quality while the brief, storyboard, brand, media and variation seed determine the final video.",
+  libraryKinds: {
+    examples:
+      "Complete project JSON; use only when genuinely close to the requested story.",
+    "design-templates":
+      "Animated Design Studio modules for titles, cards, callouts and decorative compositions.",
+    "canvas-presets":
+      "Responsive full-frame motion backgrounds and ambient effects.",
+    shapes: "Reusable vector decoration and UI-building primitives.",
+  },
+  selectionPolicy: [
+    "Search complete examples first with separate subject, purpose, audience and format queries.",
+    "Inspect preview and thumbnail metadata; a title match alone is not enough.",
+    "Exclude recently used asset slugs unless the caller explicitly requests consistency.",
+    "Adapt a close example's scene structure, but replace every topic-specific visual, copy and brand token.",
+  ],
+  noExactMatchPolicy: [
+    "Never force an unrelated full-video template.",
+    "Create a storyboard from scene recipes, then assemble design modules, canvas presets, shapes and topic-specific stock media.",
+    "Generate raw project JSON only after the storyboard, design system and motion direction are decided.",
+  ],
+  antiRepetition: [
+    "Vary layout family, scene order, motion treatment, transition family, canvas treatment and media queries independently.",
+    "Pass recentAssetSlugs from workflow history and exclude them for fresh or explore requests.",
+    "Use variationSeed for reproducibility; omit or rotate it for new creative directions.",
+    "Keep brand fonts, colors and logo stable while varying composition.",
+  ],
+  buildOrder: [
+    "Plan narrative and scene roles.",
+    "Select a style pack and variation direction.",
+    "Search examples and reusable creative-library modules.",
+    "Search topic-specific visual and audio media per scene.",
+    "Compose complete scene-based project JSON.",
+    "Validate and fix every schema error and layout warning.",
+    "Render a draft, inspect representative frames, revise, then submit the final render.",
+  ],
+  qualityGate: [
+    "Every scene has one job and one dominant focal point.",
+    "Typography, color, radius, shadow and motion language stay consistent.",
+    "Media is relevant to the claim rather than merely decorative.",
+    "Motion supports hierarchy instead of applying a different effect everywhere.",
+    "No collisions, clipping, weak contrast, dead time or competing transitions.",
+    "The final CTA is readable, specific and visible long enough to act on.",
+  ],
+} as const;
+
+export interface CreativePlanInput {
+  brief: string;
+  variationMode?: VariationMode;
+  variationSeed?: string | number;
+  nonce?: string | number;
+  exploreCount?: number;
+  aspectRatio?: CreativeAspectRatio;
+  duration?: number;
+  style?: string;
+  motionIntensity?: CreativeMotionIntensity;
+  preferredMedia?: "image" | "video" | "mixed";
+  recentAssetSlugs?: string[];
+  brand?: Record<string, unknown>;
+}
+
+const CREATIVE_LAYOUT_FAMILIES = [
+  "media-first",
+  "type-led",
+  "editorial-split",
+  "asymmetric-grid",
+  "center-stage",
+] as const;
+
+function creativeHash(value: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function creativeSeed(
+  value: string | number | undefined,
+  fallback: string,
+): number {
+  if (typeof value === "number" && Number.isFinite(value))
+    return Math.abs(Math.floor(value)) >>> 0;
+  if (typeof value === "string" && value.trim())
+    return creativeHash(value.trim());
+  return creativeHash(fallback);
+}
+
+function creativeStyleIndex(brief: string): number {
+  const lower = brief.toLowerCase();
+  let best = 0;
+  let bestScore = 0;
+  CREATIVE_STYLE_PACKS.forEach((pack, index) => {
+    const score = pack.keywords.reduce(
+      (n, keyword) => n + (lower.includes(keyword) ? 1 : 0),
+      0,
+    );
+    if (score > bestScore) {
+      best = index;
+      bestScore = score;
+    }
+  });
+  return best;
+}
+
+function sceneRolesForCount(count: number): string[] {
+  if (count <= 1) return ["hook-cta"];
+  if (count === 2) return ["hook", "cta"];
+  if (count === 3) return ["hook", "value", "cta"];
+  if (count === 4) return ["hook", "value", "proof", "cta"];
+  if (count === 5) return ["hook", "problem", "solution", "proof", "cta"];
+  if (count === 6)
+    return ["hook", "problem", "solution", "features", "proof", "cta"];
+  return ["hook", "problem", "solution", "features", "proof", "brand", "cta"];
+}
+
+function desiredSceneCount(duration: number): number {
+  if (duration <= 8) return 2;
+  if (duration <= 15) return 4;
+  if (duration <= 30) return 5;
+  if (duration <= 60) return 6;
+  return 7;
+}
+
+function creativeQueryTerms(brief: string): string[] {
+  const stop = new Set([
+    "about",
+    "after",
+    "before",
+    "create",
+    "from",
+    "make",
+    "that",
+    "their",
+    "this",
+    "video",
+    "with",
+    "your",
+  ]);
+  const terms = brief
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .split(/\s+/)
+    .filter((term) => term.length > 2 && !stop.has(term));
+  return [...new Set(terms)].slice(0, 6);
+}
+
+export function buildCreativePlan(
+  input: CreativePlanInput,
+  limits: PlanLimits = DEFAULT_LIMITS,
+): Record<string, unknown> {
+  const brief = String(input.brief || "").trim();
+  if (!brief) throw new Error("brief is required");
+
+  const variationMode = VARIATION_MODES.includes(
+    input.variationMode as VariationMode,
+  )
+    ? (input.variationMode as VariationMode)
+    : "fresh";
+  const requestedDuration =
+    Number.isFinite(input.duration) && Number(input.duration) > 0
+      ? Number(input.duration)
+      : 15;
+  const duration = Math.min(requestedDuration, limits.maxDuration);
+  const requestedSceneCount = desiredSceneCount(duration);
+  const sceneCount = Math.max(
+    1,
+    Math.min(requestedSceneCount, limits.maxScenes),
+  );
+  const roles = sceneRolesForCount(sceneCount);
+  const explicitPackIndex = CREATIVE_STYLE_PACKS.findIndex(
+    (pack) => pack.id === input.style,
+  );
+  const baseStyleIndex =
+    explicitPackIndex >= 0 ? explicitPackIndex : creativeStyleIndex(brief);
+  const exploreCount =
+    variationMode === "explore"
+      ? Math.max(2, Math.min(5, Math.floor(input.exploreCount ?? 3)))
+      : 1;
+  const baseKey = [
+    brief.toLowerCase(),
+    input.aspectRatio ?? "16:9",
+    duration,
+    input.style ?? "auto",
+  ].join("|");
+  const seedFallback =
+    variationMode === "consistent"
+      ? baseKey
+      : `${baseKey}|${String(input.nonce ?? "fresh")}`;
+  const baseSeed = creativeSeed(input.variationSeed, seedFallback);
+  const recentAssetSlugs = [
+    ...new Set(
+      (input.recentAssetSlugs ?? [])
+        .map(String)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 20);
+  const transitionOverlap = roles.length > 1 ? 0.5 : 0;
+  const sceneDurationBudget =
+    duration + transitionOverlap * Math.max(0, roles.length - 1);
+  const recipes = roles.map((role) =>
+    CREATIVE_SCENE_RECIPES.find((recipe) => recipe.role === role)!,
+  );
+  const totalWeight = recipes.reduce((sum, recipe) => sum + recipe.weight, 0);
+  const queryTerms = creativeQueryTerms(brief);
+
+  const directions = Array.from({ length: exploreCount }, (_, index) => {
+    const seed = (baseSeed + Math.imul(index, 2654435761)) >>> 0;
+    const styleIndex =
+      explicitPackIndex >= 0
+        ? explicitPackIndex
+        : (baseStyleIndex + index) % CREATIVE_STYLE_PACKS.length;
+    const stylePack = CREATIVE_STYLE_PACKS[styleIndex];
+    let allocated = 0;
+    const sceneOutline = recipes.map((recipe, sceneIndex) => {
+      const last = sceneIndex === recipes.length - 1;
+      const targetDuration = last
+        ? Math.max(0.1, Math.round((sceneDurationBudget - allocated) * 10) / 10)
+        : Math.max(
+            0.1,
+            Math.round(
+              ((sceneDurationBudget * recipe.weight) / totalWeight) * 10,
+            ) / 10,
+          );
+      allocated += targetDuration;
+      return {
+        index: sceneIndex,
+        role: recipe.role,
+        goal: recipe.goal,
+        targetDuration,
+        layoutPattern:
+          recipe.layoutPatterns[
+            (seed + sceneIndex) % recipe.layoutPatterns.length
+          ],
+        mediaNeeds: recipe.mediaNeeds,
+        ...(last
+          ? {}
+          : {
+              transition:
+                stylePack.transitionFamily[
+                  (seed + sceneIndex) % stylePack.transitionFamily.length
+                ],
+              transitionDuration: transitionOverlap,
+            }),
+      };
+    });
+    return {
+      id: `direction-${index + 1}`,
+      seed,
+      stylePack,
+      layoutFamily:
+        CREATIVE_LAYOUT_FAMILIES[
+          (seed + index) % CREATIVE_LAYOUT_FAMILIES.length
+        ],
+      motionIntensity: input.motionIntensity ?? stylePack.defaultMotion,
+      preferredMedia: input.preferredMedia ?? "mixed",
+      sceneOutline,
+    };
+  });
+
+  const warnings: string[] = [];
+  if (requestedDuration > duration)
+    warnings.push(
+      `Requested duration ${requestedDuration}s was capped to the ${limits.planName} plan maximum of ${duration}s.`,
+    );
+  if (sceneCount < requestedSceneCount)
+    warnings.push(
+      `The storyboard was reduced from ${requestedSceneCount} to ${sceneCount} scenes for the ${limits.planName} plan.`,
+    );
+
+  return {
+    creativePlanVersion: "1.0.0",
+    request: {
+      brief,
+      variationMode,
+      aspectRatio: input.aspectRatio ?? "16:9",
+      duration,
+      requestedStyle: input.style ?? "auto",
+      recentAssetSlugs,
+      brand: input.brand ?? {},
+    },
+    variation: {
+      mode: variationMode,
+      reproducible:
+        variationMode === "consistent" || input.variationSeed !== undefined,
+      directionCount: directions.length,
+      instruction:
+        variationMode === "consistent"
+          ? "Reuse this seed and selected assets for stable automation output."
+          : variationMode === "fresh"
+            ? "Use this direction, exclude recent assets, and rotate layout, media and motion choices next time."
+            : "Produce materially different storyboard and layout treatments, not recolors of one payload.",
+    },
+    searchQueries: {
+      subjectTerms: queryTerms,
+      examples: [
+        queryTerms.slice(0, 3).join(" "),
+        CREATIVE_STYLE_PACKS[baseStyleIndex].id.replace(/-/g, " "),
+      ].filter(Boolean),
+      designTemplates: CREATIVE_STYLE_PACKS[baseStyleIndex].designQueries,
+      canvasPresets: CREATIVE_STYLE_PACKS[baseStyleIndex].canvasQueries,
+      stockMedia: queryTerms.slice(0, 4),
+    },
+    exclusions: recentAssetSlugs,
+    directions,
+    creativeWorkflow: CREATIVE_WORKFLOW,
+    nextActions: [
+      "Search creative-library examples and inspect previews.",
+      "If no close example exists, assemble scenes from design templates, canvas presets and shapes.",
+      "Search topic-specific stock media and music for each scene.",
+      "Compose scene-based project JSON with the selected direction and brand tokens.",
+      "Validate, fix every error and layout warning, then render a draft before the final.",
+    ],
+    warnings,
+  };
+}
 
 export interface ValidationIssue {
   field: string;
@@ -924,7 +1920,8 @@ type Ctx = {
 const isObj = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 
-const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isNum = (v: unknown): v is number =>
+  typeof v === "number" && Number.isFinite(v);
 
 function err(ctx: Ctx, field: string, message: string) {
   ctx.errors.push({ field, message });
@@ -938,7 +1935,12 @@ function checkNumber(
   ctx: Ctx,
   field: string,
   v: unknown,
-  opts: { min?: number; max?: number; integer?: boolean; exclusiveMin?: number }
+  opts: {
+    min?: number;
+    max?: number;
+    integer?: boolean;
+    exclusiveMin?: number;
+  },
 ): boolean {
   if (!isNum(v)) {
     err(ctx, field, `${field} must be a number`);
@@ -963,19 +1965,38 @@ function checkNumber(
   return true;
 }
 
-function checkEnum(ctx: Ctx, field: string, v: unknown, values: readonly string[], allowNull = false): boolean {
+function checkEnum(
+  ctx: Ctx,
+  field: string,
+  v: unknown,
+  values: readonly string[],
+  allowNull = false,
+): boolean {
   if (allowNull && v === null) return true;
   if (typeof v !== "string" || !values.includes(v)) {
-    err(ctx, field, `${field} must be one of: ${values.join(", ")}${allowNull ? " (or null)" : ""}`);
+    err(
+      ctx,
+      field,
+      `${field} must be one of: ${values.join(", ")}${allowNull ? " (or null)" : ""}`,
+    );
     return false;
   }
   return true;
 }
 
-function checkHex(ctx: Ctx, field: string, v: unknown, withAlpha = false): boolean {
+function checkHex(
+  ctx: Ctx,
+  field: string,
+  v: unknown,
+  withAlpha = false,
+): boolean {
   const re = withAlpha ? HEX_COLOR_ALPHA : HEX_COLOR;
   if (typeof v !== "string" || !re.test(v)) {
-    err(ctx, field, `${field} must be a valid hex color (${withAlpha ? "#rrggbb or #rrggbbaa" : "e.g. #ffffff"})`);
+    err(
+      ctx,
+      field,
+      `${field} must be a valid hex color (${withAlpha ? "#rrggbb or #rrggbbaa" : "e.g. #ffffff"})`,
+    );
     return false;
   }
   return true;
@@ -983,7 +2004,11 @@ function checkHex(ctx: Ctx, field: string, v: unknown, withAlpha = false): boole
 
 function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false;
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+  )
+    return false;
   const [a, b] = parts;
   if (a === 10 || a === 127 || a === 0) return true;
   if (a === 169 && b === 254) return true;
@@ -995,9 +2020,14 @@ function isPrivateIPv4(ip: string): boolean {
 function isPrivateIPv6(ip: string): boolean {
   const v = ip.toLowerCase();
   return (
-    v === "::1" || v === "::" ||
-    v.startsWith("fe8") || v.startsWith("fe9") || v.startsWith("fea") || v.startsWith("feb") ||
-    v.startsWith("fc") || v.startsWith("fd")
+    v === "::1" ||
+    v === "::" ||
+    v.startsWith("fe8") ||
+    v.startsWith("fe9") ||
+    v.startsWith("fea") ||
+    v.startsWith("feb") ||
+    v.startsWith("fc") ||
+    v.startsWith("fd")
   );
 }
 
@@ -1015,7 +2045,8 @@ export function checkRemoteUrl(value: unknown): string | null {
     return "must be a non-empty URL string";
   }
   const v = value.trim();
-  if (v.length > MAX_URL_LEN) return `must be at most ${MAX_URL_LEN} characters`;
+  if (v.length > MAX_URL_LEN)
+    return `must be at most ${MAX_URL_LEN} characters`;
   if (URL_CONTROL_CHARS.test(v)) return "contains control characters";
   if (/[\\\s]/.test(v)) return "must not contain spaces or backslashes";
 
@@ -1025,16 +2056,24 @@ export function checkRemoteUrl(value: unknown): string | null {
   } catch {
     return "must be a valid absolute URL";
   }
-  if (u.protocol !== "https:" && u.protocol !== "http:") return "must use http or https";
+  if (u.protocol !== "https:" && u.protocol !== "http:")
+    return "must use http or https";
   if (u.username || u.password) return "must not contain credentials";
-  if (u.port && !["80", "443"].includes(u.port)) return "may only use port 80 or 443";
+  if (u.port && !["80", "443"].includes(u.port))
+    return "may only use port 80 or 443";
 
   const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local")
+  ) {
     return "must not point at localhost/.local hosts";
   }
-  if (looksLikeIPv4(host) && isPrivateIPv4(host)) return "must not point at a private IPv4 address";
-  if (looksLikeIPv6(host) && isPrivateIPv6(host)) return "must not point at a private IPv6 address";
+  if (looksLikeIPv4(host) && isPrivateIPv4(host))
+    return "must not point at a private IPv4 address";
+  if (looksLikeIPv6(host) && isPrivateIPv6(host))
+    return "must not point at a private IPv6 address";
   return null;
 }
 
@@ -1047,10 +2086,19 @@ function checkUrlField(ctx: Ctx, field: string, v: unknown): boolean {
   return true;
 }
 
-function checkUnknownKeys(ctx: Ctx, field: string, obj: Record<string, unknown>, allowed: Set<string>) {
+function checkUnknownKeys(
+  ctx: Ctx,
+  field: string,
+  obj: Record<string, unknown>,
+  allowed: Set<string>,
+) {
   for (const k of Object.keys(obj)) {
     if (!allowed.has(k)) {
-      warn(ctx, `${field}.${k}`, `Unknown field "${k}" — the backend strips it silently and the renderer never sees it`);
+      warn(
+        ctx,
+        `${field}.${k}`,
+        `Unknown field "${k}" — the backend strips it silently and the renderer never sees it`,
+      );
     }
   }
 }
@@ -1058,44 +2106,124 @@ function checkUnknownKeys(ctx: Ctx, field: string, obj: Record<string, unknown>,
 // ---- sub-validators -------------------------------------------------------
 
 const BASE_VISUAL_KEYS = [
-  "type", "x", "y", "width", "height", "position", "anchor", "resize",
-  "enterBegin", "enterEnd", "exitBegin", "exitEnd",
-  "opacity", "angle", "flipV", "flipH", "track", "enterAnimation", "exitAnimation",
+  "type",
+  "x",
+  "y",
+  "width",
+  "height",
+  "position",
+  "anchor",
+  "resize",
+  "enterBegin",
+  "enterEnd",
+  "exitBegin",
+  "exitEnd",
+  "opacity",
+  "angle",
+  "flipV",
+  "flipH",
+  "track",
+  "enterAnimation",
+  "exitAnimation",
 ];
 
-const IMAGE_LIKE_KEYS = ["src", "cropParams", "filter", "chromaKey", "zoom", "radius"];
+const IMAGE_LIKE_KEYS = [
+  "src",
+  "cropParams",
+  "filter",
+  "chromaKey",
+  "zoom",
+  "radius",
+];
 
 const VISUAL_KEYS: Record<ElementType, string[]> = {
   IMAGE: [...BASE_VISUAL_KEYS, ...IMAGE_LIKE_KEYS],
   GIF: [...BASE_VISUAL_KEYS, ...IMAGE_LIKE_KEYS],
   VIDEO: [
-    ...BASE_VISUAL_KEYS, ...IMAGE_LIKE_KEYS,
-    "videoBegin", "videoEnd", "videoDuration", "volume", "speed",
-    "transition", "transitionDuration", "transitionId", "frameRate", "id", "hasAudio",
+    ...BASE_VISUAL_KEYS,
+    ...IMAGE_LIKE_KEYS,
+    "videoBegin",
+    "videoEnd",
+    "videoDuration",
+    "volume",
+    "speed",
+    "transition",
+    "transitionDuration",
+    "transitionId",
+    "frameRate",
+    "id",
+    "hasAudio",
   ],
-  SVG: [...BASE_VISUAL_KEYS, "svg", "filter", "chromaKey", "customCode", "designer"],
-  TEXT: [...BASE_VISUAL_KEYS, "text", "html", "style", "customCode", "designer"],
+  SVG: [
+    ...BASE_VISUAL_KEYS,
+    "svg",
+    "filter",
+    "chromaKey",
+    "customCode",
+    "designer",
+  ],
+  TEXT: [
+    ...BASE_VISUAL_KEYS,
+    "text",
+    "html",
+    "style",
+    "customCode",
+    "designer",
+  ],
 };
 
 function validateBaseVisual(ctx: Ctx, f: string, v: Record<string, unknown>) {
   const L = ctx.limits;
-  if (v.x !== undefined) checkNumber(ctx, `${f}.x`, v.x, { max: L.maxInputResolution });
-  if (v.y !== undefined) checkNumber(ctx, `${f}.y`, v.y, { max: L.maxInputResolution });
-  if (v.width !== undefined) checkNumber(ctx, `${f}.width`, v.width, { min: 1, max: L.maxInputResolution });
-  if (v.height !== undefined) checkNumber(ctx, `${f}.height`, v.height, { min: 1, max: L.maxInputResolution });
-  if (v.position !== undefined) checkEnum(ctx, `${f}.position`, v.position, POSITION_PRESETS);
+  if (v.x !== undefined)
+    checkNumber(ctx, `${f}.x`, v.x, { max: L.maxInputResolution });
+  if (v.y !== undefined)
+    checkNumber(ctx, `${f}.y`, v.y, { max: L.maxInputResolution });
+  if (v.width !== undefined)
+    checkNumber(ctx, `${f}.width`, v.width, {
+      min: 1,
+      max: L.maxInputResolution,
+    });
+  if (v.height !== undefined)
+    checkNumber(ctx, `${f}.height`, v.height, {
+      min: 1,
+      max: L.maxInputResolution,
+    });
+  if (v.position !== undefined)
+    checkEnum(ctx, `${f}.position`, v.position, POSITION_PRESETS);
   if (v.anchor !== undefined) checkEnum(ctx, `${f}.anchor`, v.anchor, ANCHORS);
-  if (v.resize !== undefined) checkEnum(ctx, `${f}.resize`, v.resize, RESIZE_MODES);
+  if (v.resize !== undefined)
+    checkEnum(ctx, `${f}.resize`, v.resize, RESIZE_MODES);
   for (const k of ["enterBegin", "enterEnd", "exitBegin", "exitEnd"] as const) {
-    if (v[k] !== undefined) checkNumber(ctx, `${f}.${k}`, v[k], { min: 0, max: L.maxOutputResolution });
+    if (v[k] !== undefined)
+      checkNumber(ctx, `${f}.${k}`, v[k], {
+        min: 0,
+        max: L.maxOutputResolution,
+      });
   }
-  if (v.opacity !== undefined) checkNumber(ctx, `${f}.opacity`, v.opacity, { min: 0, max: 1 });
-  if (v.angle !== undefined) checkNumber(ctx, `${f}.angle`, v.angle, { min: -360, max: 360 });
-  if (v.flipV !== undefined && typeof v.flipV !== "boolean") err(ctx, `${f}.flipV`, `${f}.flipV must be a boolean`);
-  if (v.flipH !== undefined && typeof v.flipH !== "boolean") err(ctx, `${f}.flipH`, `${f}.flipH must be a boolean`);
-  if (v.track !== undefined) checkNumber(ctx, `${f}.track`, v.track, { min: 0, max: 1_000_000, integer: true });
-  if (v.enterAnimation !== undefined) checkEnum(ctx, `${f}.enterAnimation`, v.enterAnimation, XFADE_EFFECTS, true);
-  if (v.exitAnimation !== undefined) checkEnum(ctx, `${f}.exitAnimation`, v.exitAnimation, XFADE_EFFECTS, true);
+  if (v.opacity !== undefined)
+    checkNumber(ctx, `${f}.opacity`, v.opacity, { min: 0, max: 1 });
+  if (v.angle !== undefined)
+    checkNumber(ctx, `${f}.angle`, v.angle, { min: -360, max: 360 });
+  if (v.flipV !== undefined && typeof v.flipV !== "boolean")
+    err(ctx, `${f}.flipV`, `${f}.flipV must be a boolean`);
+  if (v.flipH !== undefined && typeof v.flipH !== "boolean")
+    err(ctx, `${f}.flipH`, `${f}.flipH must be a boolean`);
+  if (v.track !== undefined)
+    checkNumber(ctx, `${f}.track`, v.track, {
+      min: 0,
+      max: 1_000_000,
+      integer: true,
+    });
+  if (v.enterAnimation !== undefined)
+    checkEnum(
+      ctx,
+      `${f}.enterAnimation`,
+      v.enterAnimation,
+      XFADE_EFFECTS,
+      true,
+    );
+  if (v.exitAnimation !== undefined)
+    checkEnum(ctx, `${f}.exitAnimation`, v.exitAnimation, XFADE_EFFECTS, true);
 }
 
 function validateMediaExtras(ctx: Ctx, f: string, v: Record<string, unknown>) {
@@ -1106,13 +2234,35 @@ function validateMediaExtras(ctx: Ctx, f: string, v: Record<string, unknown>) {
     } else {
       const c = v.cropParams;
       for (const k of ["x", "y", "width", "height"] as const) {
-        if (c[k] === undefined) err(ctx, `${f}.cropParams.${k}`, `${f}.cropParams.${k} is required`);
+        if (c[k] === undefined)
+          err(ctx, `${f}.cropParams.${k}`, `${f}.cropParams.${k} is required`);
       }
-      if (c.x !== undefined) checkNumber(ctx, `${f}.cropParams.x`, c.x, { min: 0, max: L.maxInputResolution });
-      if (c.y !== undefined) checkNumber(ctx, `${f}.cropParams.y`, c.y, { min: 0, max: L.maxInputResolution });
-      if (c.width !== undefined) checkNumber(ctx, `${f}.cropParams.width`, c.width, { min: 1, max: L.maxInputResolution });
-      if (c.height !== undefined) checkNumber(ctx, `${f}.cropParams.height`, c.height, { min: 1, max: L.maxInputResolution });
-      checkUnknownKeys(ctx, `${f}.cropParams`, c, new Set(["x", "y", "width", "height"]));
+      if (c.x !== undefined)
+        checkNumber(ctx, `${f}.cropParams.x`, c.x, {
+          min: 0,
+          max: L.maxInputResolution,
+        });
+      if (c.y !== undefined)
+        checkNumber(ctx, `${f}.cropParams.y`, c.y, {
+          min: 0,
+          max: L.maxInputResolution,
+        });
+      if (c.width !== undefined)
+        checkNumber(ctx, `${f}.cropParams.width`, c.width, {
+          min: 1,
+          max: L.maxInputResolution,
+        });
+      if (c.height !== undefined)
+        checkNumber(ctx, `${f}.cropParams.height`, c.height, {
+          min: 1,
+          max: L.maxInputResolution,
+        });
+      checkUnknownKeys(
+        ctx,
+        `${f}.cropParams`,
+        c,
+        new Set(["x", "y", "width", "height"]),
+      );
     }
   }
   if (v.radius !== undefined) {
@@ -1120,9 +2270,18 @@ function validateMediaExtras(ctx: Ctx, f: string, v: Record<string, unknown>) {
       err(ctx, `${f}.radius`, `${f}.radius must be an object with tl/tr/bl/br`);
     } else {
       for (const k of ["tl", "tr", "bl", "br"] as const) {
-        if (v.radius[k] !== undefined) checkNumber(ctx, `${f}.radius.${k}`, v.radius[k], { min: 0, max: L.maxInputResolution });
+        if (v.radius[k] !== undefined)
+          checkNumber(ctx, `${f}.radius.${k}`, v.radius[k], {
+            min: 0,
+            max: L.maxInputResolution,
+          });
       }
-      checkUnknownKeys(ctx, `${f}.radius`, v.radius, new Set(["tl", "tr", "bl", "br"]));
+      checkUnknownKeys(
+        ctx,
+        `${f}.radius`,
+        v.radius,
+        new Set(["tl", "tr", "bl", "br"]),
+      );
     }
   }
   if (v.filter !== undefined) {
@@ -1131,37 +2290,82 @@ function validateMediaExtras(ctx: Ctx, f: string, v: Record<string, unknown>) {
     } else {
       const fl = v.filter;
       for (const k of ["brightness", "contrast", "saturate"] as const) {
-        if (fl[k] !== undefined) checkNumber(ctx, `${f}.filter.${k}`, fl[k], { min: -100, max: 100 });
+        if (fl[k] !== undefined)
+          checkNumber(ctx, `${f}.filter.${k}`, fl[k], { min: -100, max: 100 });
       }
-      if (fl["hue-rotate"] !== undefined && typeof fl["hue-rotate"] !== "string")
-        err(ctx, `${f}.filter.hue-rotate`, `${f}.filter.hue-rotate must be a string like "90deg"`);
+      if (
+        fl["hue-rotate"] !== undefined &&
+        typeof fl["hue-rotate"] !== "string"
+      )
+        err(
+          ctx,
+          `${f}.filter.hue-rotate`,
+          `${f}.filter.hue-rotate must be a string like "90deg"`,
+        );
       if (fl.blur !== undefined && typeof fl.blur !== "string")
-        err(ctx, `${f}.filter.blur`, `${f}.filter.blur must be a string like "4px"`);
+        err(
+          ctx,
+          `${f}.filter.blur`,
+          `${f}.filter.blur must be a string like "4px"`,
+        );
       if (fl.invert !== undefined && typeof fl.invert !== "boolean")
         err(ctx, `${f}.filter.invert`, `${f}.filter.invert must be a boolean`);
-      if (fl.colorTint !== undefined) checkHex(ctx, `${f}.filter.colorTint`, fl.colorTint);
-      checkUnknownKeys(ctx, `${f}.filter`, fl, new Set(["brightness", "contrast", "saturate", "hue-rotate", "blur", "invert", "colorTint"]));
+      if (fl.colorTint !== undefined)
+        checkHex(ctx, `${f}.filter.colorTint`, fl.colorTint);
+      checkUnknownKeys(
+        ctx,
+        `${f}.filter`,
+        fl,
+        new Set([
+          "brightness",
+          "contrast",
+          "saturate",
+          "hue-rotate",
+          "blur",
+          "invert",
+          "colorTint",
+        ]),
+      );
     }
   }
   if (v.chromaKey !== undefined) {
     if (!isObj(v.chromaKey)) {
       err(ctx, `${f}.chromaKey`, `${f}.chromaKey must be an object`);
     } else {
-      if (v.chromaKey.color === undefined) err(ctx, `${f}.chromaKey.color`, `${f}.chromaKey.color is required`);
+      if (v.chromaKey.color === undefined)
+        err(ctx, `${f}.chromaKey.color`, `${f}.chromaKey.color is required`);
       else checkHex(ctx, `${f}.chromaKey.color`, v.chromaKey.color);
-      if (v.chromaKey.similarity !== undefined) checkNumber(ctx, `${f}.chromaKey.similarity`, v.chromaKey.similarity, { min: 0, max: 100 });
-      if (v.chromaKey.blend !== undefined) checkNumber(ctx, `${f}.chromaKey.blend`, v.chromaKey.blend, { min: 0, max: 100 });
-      checkUnknownKeys(ctx, `${f}.chromaKey`, v.chromaKey, new Set(["color", "similarity", "blend"]));
+      if (v.chromaKey.similarity !== undefined)
+        checkNumber(ctx, `${f}.chromaKey.similarity`, v.chromaKey.similarity, {
+          min: 0,
+          max: 100,
+        });
+      if (v.chromaKey.blend !== undefined)
+        checkNumber(ctx, `${f}.chromaKey.blend`, v.chromaKey.blend, {
+          min: 0,
+          max: 100,
+        });
+      checkUnknownKeys(
+        ctx,
+        `${f}.chromaKey`,
+        v.chromaKey,
+        new Set(["color", "similarity", "blend"]),
+      );
     }
   }
   if (v.zoom !== undefined) {
     if (typeof v.zoom === "boolean") {
       // ok
     } else if (isObj(v.zoom)) {
-      if (v.zoom.depth !== undefined) checkNumber(ctx, `${f}.zoom.depth`, v.zoom.depth, { min: 1, max: 10 });
+      if (v.zoom.depth !== undefined)
+        checkNumber(ctx, `${f}.zoom.depth`, v.zoom.depth, { min: 1, max: 10 });
       checkUnknownKeys(ctx, `${f}.zoom`, v.zoom, new Set(["depth"]));
     } else {
-      err(ctx, `${f}.zoom`, `${f}.zoom must be a boolean or an object with a "depth" number (1-10)`);
+      err(
+        ctx,
+        `${f}.zoom`,
+        `${f}.zoom must be a boolean or an object with a "depth" number (1-10)`,
+      );
     }
   }
 }
@@ -1182,7 +2386,11 @@ function validateCustomCode(ctx: Ctx, f: string, v: unknown) {
       continue;
     }
     if (code.length > MAX_CUSTOM_CODE_LEN) {
-      err(ctx, `${f}.${key}`, `${f}.${key} exceeds ${MAX_CUSTOM_CODE_LEN} characters`);
+      err(
+        ctx,
+        `${f}.${key}`,
+        `${f}.${key} exceeds ${MAX_CUSTOM_CODE_LEN} characters`,
+      );
       continue;
     }
     if (CONTROL_CHARS.test(code)) {
@@ -1191,7 +2399,11 @@ function validateCustomCode(ctx: Ctx, f: string, v: unknown) {
     }
     for (const { pattern, reason } of rules) {
       if (pattern.test(code)) {
-        err(ctx, `${f}.${key}`, `Unsafe customCode.${key}: contains ${reason}, which is not allowed inside the rendering browser`);
+        err(
+          ctx,
+          `${f}.${key}`,
+          `Unsafe customCode.${key}: contains ${reason}, which is not allowed inside the rendering browser`,
+        );
         break;
       }
     }
@@ -1257,11 +2469,18 @@ function validateSvgString(ctx: Ctx, f: string, svg: unknown) {
   let m: RegExpExecArray | null;
   while ((m = urlRe.exec(svg))) {
     let inside = m[1].trim();
-    if ((inside.startsWith("'") && inside.endsWith("'")) || (inside.startsWith('"') && inside.endsWith('"'))) {
+    if (
+      (inside.startsWith("'") && inside.endsWith("'")) ||
+      (inside.startsWith('"') && inside.endsWith('"'))
+    ) {
       inside = inside.slice(1, -1).trim();
     }
     if (!inside.startsWith("#")) {
-      err(ctx, f, `${f}: external url() references are not allowed (only url(#id))`);
+      err(
+        ctx,
+        f,
+        `${f}: external url() references are not allowed (only url(#id))`,
+      );
       return;
     }
   }
@@ -1271,7 +2490,11 @@ function validateSvgString(ctx: Ctx, f: string, svg: unknown) {
     const value = m[3].trim();
     const unsafe = value !== "" && !value.startsWith("#");
     if (unsafe) {
-      err(ctx, f, `${f}: external ${m[1].toLowerCase()} is not allowed (only "#...")`);
+      err(
+        ctx,
+        f,
+        `${f}: external ${m[1].toLowerCase()} is not allowed (only "#...")`,
+      );
       return;
     }
   }
@@ -1281,7 +2504,9 @@ function validateSvgString(ctx: Ctx, f: string, svg: unknown) {
   }
   // dimension bounds
   const dim = (name: string): number | null => {
-    const dm = svg.match(new RegExp(`\\b${name}\\s*=\\s*['"]([^'"]+)['"]`, "i"));
+    const dm = svg.match(
+      new RegExp(`\\b${name}\\s*=\\s*['"]([^'"]+)['"]`, "i"),
+    );
     if (!dm) return null;
     const nm = dm[1].trim().match(/^(-?\d+(\.\d+)?)(px)?$/i);
     return nm ? Number(nm[1]) : null;
@@ -1308,7 +2533,9 @@ function validateSvgString(ctx: Ctx, f: string, svg: unknown) {
 }
 
 const HTML_TAG_RE = /<\s*\/?\s*([a-zA-Z][a-zA-Z0-9-]*)/g;
-const TEXT_HTML_ALLOWED = new Set<string>(TEXT_HTML_ALLOWED_TAGS.map((t) => t.toLowerCase()));
+const TEXT_HTML_ALLOWED = new Set<string>(
+  TEXT_HTML_ALLOWED_TAGS.map((t) => t.toLowerCase()),
+);
 
 function validateTextHtml(ctx: Ctx, f: string, html: unknown) {
   if (typeof html !== "string") {
@@ -1340,7 +2567,11 @@ function validateTextHtml(ctx: Ctx, f: string, html: unknown) {
   while ((m = HTML_TAG_RE.exec(html))) {
     const tag = m[1].toLowerCase();
     if (!TEXT_HTML_ALLOWED.has(tag)) {
-      err(ctx, f, `${f}: tag not allowed: <${tag}> (allowed: b, strong, i, em, u, s, br, span, div, p, ul, ol, li, img, canvas, svg + svg geometry)`);
+      err(
+        ctx,
+        f,
+        `${f}: tag not allowed: <${tag}> (allowed: b, strong, i, em, u, s, br, span, div, p, ul, ol, li, img, canvas, svg + svg geometry)`,
+      );
       return;
     }
   }
@@ -1349,7 +2580,11 @@ function validateTextHtml(ctx: Ctx, f: string, html: unknown) {
     const styleAttrs = html.match(/style\s*=\s*(['"])(.*?)\1/gi) ?? [];
     for (const attr of styleAttrs) {
       if (rx.test(attr)) {
-        err(ctx, f, `${f}: dangerous CSS in style attribute (url()/@import/expression()/comments are rejected)`);
+        err(
+          ctx,
+          f,
+          `${f}: dangerous CSS in style attribute (url()/@import/expression()/comments are rejected)`,
+        );
         return;
       }
     }
@@ -1371,7 +2606,9 @@ function validateStyleObject(ctx: Ctx, f: string, style: unknown) {
       err(ctx, f, `${f}: forbidden key: ${k}`);
       return;
     }
-    const validName = k.startsWith("--") ? CSS_VAR_NAME.test(k) : CSS_PROP_NAME.test(k);
+    const validName = k.startsWith("--")
+      ? CSS_VAR_NAME.test(k)
+      : CSS_PROP_NAME.test(k);
     if (!validName) {
       err(ctx, f, `${f}: invalid CSS property name: ${k}`);
       return;
@@ -1383,7 +2620,11 @@ function validateStyleObject(ctx: Ctx, f: string, style: unknown) {
     }
     const s = String(v);
     if (s.length > MAX_STYLE_VALUE_LEN) {
-      err(ctx, `${f}.${k}`, `${f}.${k} value too long (max ${MAX_STYLE_VALUE_LEN})`);
+      err(
+        ctx,
+        `${f}.${k}`,
+        `${f}.${k} value too long (max ${MAX_STYLE_VALUE_LEN})`,
+      );
       continue;
     }
     if (CONTROL_CHARS.test(s)) {
@@ -1392,7 +2633,11 @@ function validateStyleObject(ctx: Ctx, f: string, style: unknown) {
     }
     for (const rx of CSS_DANGEROUS_GLOBAL) {
       if (rx.test(s)) {
-        err(ctx, `${f}.${k}`, `${f}.${k} contains a dangerous CSS token (url()/@import/image-set()/expression()/comments are rejected)`);
+        err(
+          ctx,
+          `${f}.${k}`,
+          `${f}.${k} contains a dangerous CSS token (url()/@import/image-set()/expression()/comments are rejected)`,
+        );
         break;
       }
     }
@@ -1403,10 +2648,16 @@ function normalizeType(v: Record<string, unknown>): ElementType | null {
   const t = v.type;
   if (typeof t !== "string") return null;
   const upper = t.toUpperCase();
-  return (ELEMENT_TYPES as readonly string[]).includes(upper) ? (upper as ElementType) : null;
+  return (ELEMENT_TYPES as readonly string[]).includes(upper)
+    ? (upper as ElementType)
+    : null;
 }
 
-function validateVisual(ctx: Ctx, f: string, visual: unknown): ElementType | null {
+function validateVisual(
+  ctx: Ctx,
+  f: string,
+  visual: unknown,
+): ElementType | null {
   if (!isObj(visual)) {
     err(ctx, f, `${f} must be an object`);
     return null;
@@ -1417,7 +2668,11 @@ function validateVisual(ctx: Ctx, f: string, visual: unknown): ElementType | nul
   }
   const type = normalizeType(visual);
   if (!type) {
-    err(ctx, f, `${f} has invalid type "${visual.type}". Must be one of: IMAGE, VIDEO, GIF, SVG, TEXT`);
+    err(
+      ctx,
+      f,
+      `${f} has invalid type "${visual.type}". Must be one of: IMAGE, VIDEO, GIF, SVG, TEXT`,
+    );
     return null;
   }
 
@@ -1428,59 +2683,126 @@ function validateVisual(ctx: Ctx, f: string, visual: unknown): ElementType | nul
   switch (type) {
     case "IMAGE":
     case "GIF": {
-      if (visual.src === undefined) err(ctx, `${f}.src`, `${f}.src is required`);
+      if (visual.src === undefined)
+        err(ctx, `${f}.src`, `${f}.src is required`);
       else checkUrlField(ctx, `${f}.src`, visual.src);
       validateMediaExtras(ctx, f, visual);
       break;
     }
     case "VIDEO": {
-      if (visual.src === undefined) err(ctx, `${f}.src`, `${f}.src is required`);
+      if (visual.src === undefined)
+        err(ctx, `${f}.src`, `${f}.src is required`);
       else checkUrlField(ctx, `${f}.src`, visual.src);
       validateMediaExtras(ctx, f, visual);
-      if (visual.videoBegin !== undefined) checkNumber(ctx, `${f}.videoBegin`, visual.videoBegin, { min: 0, max: L.maxDuration });
-      if (visual.videoEnd !== undefined) checkNumber(ctx, `${f}.videoEnd`, visual.videoEnd, { min: 0, max: L.maxDuration });
-      if (visual.videoDuration !== undefined) checkNumber(ctx, `${f}.videoDuration`, visual.videoDuration, { min: 0.1, max: L.maxDuration });
-      if (visual.volume !== undefined) checkNumber(ctx, `${f}.volume`, visual.volume, { min: 0, max: 1 });
-      if (visual.speed !== undefined) checkNumber(ctx, `${f}.speed`, visual.speed, { min: 0.1, max: 10 });
-      if (visual.transition !== undefined) checkEnum(ctx, `${f}.transition`, visual.transition, XFADE_EFFECTS, true);
-      if (visual.transitionDuration !== undefined) checkNumber(ctx, `${f}.transitionDuration`, visual.transitionDuration, { min: 0, max: L.maxOutputResolution });
+      if (visual.videoBegin !== undefined)
+        checkNumber(ctx, `${f}.videoBegin`, visual.videoBegin, {
+          min: 0,
+          max: L.maxDuration,
+        });
+      if (visual.videoEnd !== undefined)
+        checkNumber(ctx, `${f}.videoEnd`, visual.videoEnd, {
+          min: 0,
+          max: L.maxDuration,
+        });
+      if (visual.videoDuration !== undefined)
+        checkNumber(ctx, `${f}.videoDuration`, visual.videoDuration, {
+          min: 0.1,
+          max: L.maxDuration,
+        });
+      if (visual.volume !== undefined)
+        checkNumber(ctx, `${f}.volume`, visual.volume, { min: 0, max: 1 });
+      if (visual.speed !== undefined)
+        checkNumber(ctx, `${f}.speed`, visual.speed, { min: 0.1, max: 10 });
+      if (visual.transition !== undefined)
+        checkEnum(
+          ctx,
+          `${f}.transition`,
+          visual.transition,
+          XFADE_EFFECTS,
+          true,
+        );
+      if (visual.transitionDuration !== undefined)
+        checkNumber(ctx, `${f}.transitionDuration`, visual.transitionDuration, {
+          min: 0,
+          max: L.maxOutputResolution,
+        });
       if (visual.transitionId !== undefined) {
-        if (typeof visual.transitionId !== "string" || !ID_REGEX.test(visual.transitionId) || visual.transitionId.length > MAX_ID_LEN)
-          err(ctx, `${f}.transitionId`, `${f}.transitionId must match ${ID_REGEX} (max ${MAX_ID_LEN} chars)`);
+        if (
+          typeof visual.transitionId !== "string" ||
+          !ID_REGEX.test(visual.transitionId) ||
+          visual.transitionId.length > MAX_ID_LEN
+        )
+          err(
+            ctx,
+            `${f}.transitionId`,
+            `${f}.transitionId must match ${ID_REGEX} (max ${MAX_ID_LEN} chars)`,
+          );
       }
-      if (visual.frameRate !== undefined) checkNumber(ctx, `${f}.frameRate`, visual.frameRate, { min: 1, max: 60, integer: true });
-      if (visual.id !== undefined && (typeof visual.id !== "string" || !ID_REGEX.test(visual.id)))
+      if (visual.frameRate !== undefined)
+        checkNumber(ctx, `${f}.frameRate`, visual.frameRate, {
+          min: 1,
+          max: 60,
+          integer: true,
+        });
+      if (
+        visual.id !== undefined &&
+        (typeof visual.id !== "string" || !ID_REGEX.test(visual.id))
+      )
         err(ctx, `${f}.id`, `${f}.id must match ${ID_REGEX}`);
       if (visual.hasAudio !== undefined && typeof visual.hasAudio !== "boolean")
         err(ctx, `${f}.hasAudio`, `${f}.hasAudio must be a boolean`);
       break;
     }
     case "SVG": {
-      if (visual.svg === undefined) err(ctx, `${f}.svg`, `${f}.svg is required`);
+      if (visual.svg === undefined)
+        err(ctx, `${f}.svg`, `${f}.svg is required`);
       else validateSvgString(ctx, `${f}.svg`, visual.svg);
       if (visual.filter !== undefined || visual.chromaKey !== undefined) {
-        validateMediaExtras(ctx, f, { filter: visual.filter, chromaKey: visual.chromaKey });
+        validateMediaExtras(ctx, f, {
+          filter: visual.filter,
+          chromaKey: visual.chromaKey,
+        });
       }
-      if (visual.customCode !== undefined) validateCustomCode(ctx, `${f}.customCode`, visual.customCode);
-      if (visual.designer !== undefined) validateDesigner(ctx, `${f}.designer`, visual.designer);
+      if (visual.customCode !== undefined)
+        validateCustomCode(ctx, `${f}.customCode`, visual.customCode);
+      if (visual.designer !== undefined)
+        validateDesigner(ctx, `${f}.designer`, visual.designer);
       break;
     }
     case "TEXT": {
       if (visual.text !== undefined) {
-        if (typeof visual.text !== "string") err(ctx, `${f}.text`, `${f}.text must be a string`);
+        if (typeof visual.text !== "string")
+          err(ctx, `${f}.text`, `${f}.text must be a string`);
         else {
-          if (visual.text.length > MAX_TEXT_LEN) err(ctx, `${f}.text`, `${f}.text exceeds ${MAX_TEXT_LEN} characters`);
-          if (CONTROL_CHARS.test(visual.text)) err(ctx, `${f}.text`, `${f}.text contains control characters`);
-          if (/[<>]/.test(visual.text)) err(ctx, `${f}.text`, `${f}.text: HTML markup not allowed in text (use "html")`);
+          if (visual.text.length > MAX_TEXT_LEN)
+            err(
+              ctx,
+              `${f}.text`,
+              `${f}.text exceeds ${MAX_TEXT_LEN} characters`,
+            );
+          if (CONTROL_CHARS.test(visual.text))
+            err(ctx, `${f}.text`, `${f}.text contains control characters`);
+          if (/[<>]/.test(visual.text))
+            err(
+              ctx,
+              `${f}.text`,
+              `${f}.text: HTML markup not allowed in text (use "html")`,
+            );
         }
       }
-      if (visual.html !== undefined) validateTextHtml(ctx, `${f}.html`, visual.html);
-      if (visual.style !== undefined) validateStyleObject(ctx, `${f}.style`, visual.style);
-      if (visual.customCode !== undefined) validateCustomCode(ctx, `${f}.customCode`, visual.customCode);
-      if (visual.designer !== undefined) validateDesigner(ctx, `${f}.designer`, visual.designer);
+      if (visual.html !== undefined)
+        validateTextHtml(ctx, `${f}.html`, visual.html);
+      if (visual.style !== undefined)
+        validateStyleObject(ctx, `${f}.style`, visual.style);
+      if (visual.customCode !== undefined)
+        validateCustomCode(ctx, `${f}.customCode`, visual.customCode);
+      if (visual.designer !== undefined)
+        validateDesigner(ctx, `${f}.designer`, visual.designer);
 
-      const hasText = typeof visual.text === "string" && visual.text.trim().length > 0;
-      const hasHtml = typeof visual.html === "string" && visual.html.trim().length > 0;
+      const hasText =
+        typeof visual.text === "string" && visual.text.trim().length > 0;
+      const hasHtml =
+        typeof visual.html === "string" && visual.html.trim().length > 0;
       if (!hasText && !hasHtml) {
         err(ctx, f, `${f}: TEXT element needs non-empty "text" and/or "html"`);
       }
@@ -1490,7 +2812,16 @@ function validateVisual(ctx: Ctx, f: string, visual: unknown): ElementType | nul
   return type;
 }
 
-const AUDIO_KEYS = new Set(["src", "enter", "exit", "volume", "speed", "audioBegin", "audioEnd", "audioDuration"]);
+const AUDIO_KEYS = new Set([
+  "src",
+  "enter",
+  "exit",
+  "volume",
+  "speed",
+  "audioBegin",
+  "audioEnd",
+  "audioDuration",
+]);
 
 function validateAudio(ctx: Ctx, f: string, a: unknown) {
   if (!isObj(a)) {
@@ -1500,14 +2831,41 @@ function validateAudio(ctx: Ctx, f: string, a: unknown) {
   const L = ctx.limits;
   checkUnknownKeys(ctx, f, a, AUDIO_KEYS);
   if (a.src !== undefined) checkUrlField(ctx, `${f}.src`, a.src);
-  else warn(ctx, `${f}.src`, `${f}.src is missing — an audio item without src plays nothing`);
-  if (a.enter !== undefined) checkNumber(ctx, `${f}.enter`, a.enter, { min: 0, max: L.maxOutputResolution });
-  if (a.exit !== undefined) checkNumber(ctx, `${f}.exit`, a.exit, { min: 0, max: L.maxOutputResolution });
-  if (a.volume !== undefined) checkNumber(ctx, `${f}.volume`, a.volume, { min: 0, max: 1 });
-  if (a.speed !== undefined) checkNumber(ctx, `${f}.speed`, a.speed, { min: 0.1, max: 10 });
-  if (a.audioBegin !== undefined) checkNumber(ctx, `${f}.audioBegin`, a.audioBegin, { min: 0, max: L.maxDuration });
-  if (a.audioEnd !== undefined) checkNumber(ctx, `${f}.audioEnd`, a.audioEnd, { min: 0, max: L.maxDuration });
-  if (a.audioDuration !== undefined) checkNumber(ctx, `${f}.audioDuration`, a.audioDuration, { min: 0, max: L.maxDuration });
+  else
+    warn(
+      ctx,
+      `${f}.src`,
+      `${f}.src is missing — an audio item without src plays nothing`,
+    );
+  if (a.enter !== undefined)
+    checkNumber(ctx, `${f}.enter`, a.enter, {
+      min: 0,
+      max: L.maxOutputResolution,
+    });
+  if (a.exit !== undefined)
+    checkNumber(ctx, `${f}.exit`, a.exit, {
+      min: 0,
+      max: L.maxOutputResolution,
+    });
+  if (a.volume !== undefined)
+    checkNumber(ctx, `${f}.volume`, a.volume, { min: 0, max: 1 });
+  if (a.speed !== undefined)
+    checkNumber(ctx, `${f}.speed`, a.speed, { min: 0.1, max: 10 });
+  if (a.audioBegin !== undefined)
+    checkNumber(ctx, `${f}.audioBegin`, a.audioBegin, {
+      min: 0,
+      max: L.maxDuration,
+    });
+  if (a.audioEnd !== undefined)
+    checkNumber(ctx, `${f}.audioEnd`, a.audioEnd, {
+      min: 0,
+      max: L.maxDuration,
+    });
+  if (a.audioDuration !== undefined)
+    checkNumber(ctx, `${f}.audioDuration`, a.audioDuration, {
+      min: 0,
+      max: L.maxDuration,
+    });
   // temporal
   if (isNum(a.enter) && isNum(a.exit) && a.exit < a.enter) {
     err(ctx, `${f}.exit`, "audio.exit cannot be before audio.enter");
@@ -1517,17 +2875,38 @@ function validateAudio(ctx: Ctx, f: string, a: unknown) {
   }
 }
 
-const SUBTITLE_V2_KEYS = ["animation", "direction", "font", "stroke", "background", "activeWord", "position", "margin"];
-const SUBTITLE_KEYS = new Set(["src", "captions", "styles", "maxWordsPerLine", ...SUBTITLE_V2_KEYS]);
+const SUBTITLE_V2_KEYS = [
+  "animation",
+  "direction",
+  "font",
+  "stroke",
+  "background",
+  "activeWord",
+  "position",
+  "margin",
+];
+const SUBTITLE_KEYS = new Set([
+  "src",
+  "captions",
+  "styles",
+  "maxWordsPerLine",
+  ...SUBTITLE_V2_KEYS,
+]);
 
 function validateActiveWord(ctx: Ctx, f: string, v: unknown) {
   if (!isObj(v) || Object.keys(v).length < 1) {
-    err(ctx, f, `${f} must be an object with at least one of color/background/radius`);
+    err(
+      ctx,
+      f,
+      `${f} must be an object with at least one of color/background/radius`,
+    );
     return;
   }
   if (v.color !== undefined) checkHex(ctx, `${f}.color`, v.color, true);
-  if (v.background !== undefined) checkHex(ctx, `${f}.background`, v.background, true);
-  if (v.radius !== undefined) checkNumber(ctx, `${f}.radius`, v.radius, { min: 0, max: 200 });
+  if (v.background !== undefined)
+    checkHex(ctx, `${f}.background`, v.background, true);
+  if (v.radius !== undefined)
+    checkNumber(ctx, `${f}.radius`, v.radius, { min: 0, max: 200 });
   checkUnknownKeys(ctx, f, v, new Set(["color", "background", "radius"]));
 }
 
@@ -1543,7 +2922,11 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
   const hasSrc = subtitle.src !== undefined;
   const hasCaptions = subtitle.captions !== undefined;
   if (hasSrc === hasCaptions) {
-    err(ctx, f, 'subtitle needs exactly one of "src" (SRT/VTT URL) or "captions"');
+    err(
+      ctx,
+      f,
+      'subtitle needs exactly one of "src" (SRT/VTT URL) or "captions"',
+    );
   }
   if (hasSrc) checkUrlField(ctx, `${f}.src`, subtitle.src);
   if (hasCaptions) {
@@ -1551,7 +2934,11 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
       err(ctx, `${f}.captions`, "subtitle.captions must be a non-empty array");
     } else {
       if (subtitle.captions.length > L.maxCaptionElements) {
-        err(ctx, `${f}.captions`, `Max captions allowed is ${L.maxCaptionElements} (based on your ${L.planName} plan)`);
+        err(
+          ctx,
+          `${f}.captions`,
+          `Max captions allowed is ${L.maxCaptionElements} (based on your ${L.planName} plan)`,
+        );
       }
       subtitle.captions.forEach((cap: unknown, i: number) => {
         const cf = `${f}.captions[${i}]`;
@@ -1559,18 +2946,42 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
           err(ctx, cf, `${cf} must be an object`);
           return;
         }
-        checkUnknownKeys(ctx, cf, cap, new Set(["start", "end", "text", "words"]));
-        if (cap.start === undefined) err(ctx, `${cf}.start`, `${cf}.start is required`);
-        else checkNumber(ctx, `${cf}.start`, cap.start, { min: 0, max: L.maxInputResolution });
-        if (cap.end === undefined) err(ctx, `${cf}.end`, `${cf}.end is required`);
-        else checkNumber(ctx, `${cf}.end`, cap.end, { min: 0, max: L.maxInputResolution });
+        checkUnknownKeys(
+          ctx,
+          cf,
+          cap,
+          new Set(["start", "end", "text", "words"]),
+        );
+        if (cap.start === undefined)
+          err(ctx, `${cf}.start`, `${cf}.start is required`);
+        else
+          checkNumber(ctx, `${cf}.start`, cap.start, {
+            min: 0,
+            max: L.maxInputResolution,
+          });
+        if (cap.end === undefined)
+          err(ctx, `${cf}.end`, `${cf}.end is required`);
+        else
+          checkNumber(ctx, `${cf}.end`, cap.end, {
+            min: 0,
+            max: L.maxInputResolution,
+          });
         const hasText = cap.text !== undefined;
         const hasWords = cap.words !== undefined;
         if (!hasText && !hasWords) {
           err(ctx, cf, `${cf} needs "text" and/or "words"`);
         }
-        if (hasText && (typeof cap.text !== "string" || cap.text.length < 1 || cap.text.length > MAX_SUBTITLE_TEXT_LEN)) {
-          err(ctx, `${cf}.text`, `${cf}.text must be a string of 1..${MAX_SUBTITLE_TEXT_LEN} characters`);
+        if (
+          hasText &&
+          (typeof cap.text !== "string" ||
+            cap.text.length < 1 ||
+            cap.text.length > MAX_SUBTITLE_TEXT_LEN)
+        ) {
+          err(
+            ctx,
+            `${cf}.text`,
+            `${cf}.text must be a string of 1..${MAX_SUBTITLE_TEXT_LEN} characters`,
+          );
         }
         if (hasWords) {
           if (!Array.isArray(cap.words) || cap.words.length < 1) {
@@ -1583,12 +2994,30 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
                 return;
               }
               checkUnknownKeys(ctx, wf, w, new Set(["start", "end", "text"]));
-              if (w.start === undefined) err(ctx, `${wf}.start`, `${wf}.start is required`);
-              else checkNumber(ctx, `${wf}.start`, w.start, { min: 0, max: L.maxInputResolution });
-              if (w.end === undefined) err(ctx, `${wf}.end`, `${wf}.end is required`);
-              else checkNumber(ctx, `${wf}.end`, w.end, { min: 0, max: L.maxInputResolution });
-              if (typeof w.text !== "string" || w.text.length < 1 || w.text.length > MAX_SUBTITLE_WORD_LEN) {
-                err(ctx, `${wf}.text`, `${wf}.text must be a string of 1..${MAX_SUBTITLE_WORD_LEN} characters`);
+              if (w.start === undefined)
+                err(ctx, `${wf}.start`, `${wf}.start is required`);
+              else
+                checkNumber(ctx, `${wf}.start`, w.start, {
+                  min: 0,
+                  max: L.maxInputResolution,
+                });
+              if (w.end === undefined)
+                err(ctx, `${wf}.end`, `${wf}.end is required`);
+              else
+                checkNumber(ctx, `${wf}.end`, w.end, {
+                  min: 0,
+                  max: L.maxInputResolution,
+                });
+              if (
+                typeof w.text !== "string" ||
+                w.text.length < 1 ||
+                w.text.length > MAX_SUBTITLE_WORD_LEN
+              ) {
+                err(
+                  ctx,
+                  `${wf}.text`,
+                  `${wf}.text must be a string of 1..${MAX_SUBTITLE_WORD_LEN} characters`,
+                );
               }
             });
           }
@@ -1600,64 +3029,147 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
   const hasLegacy = subtitle.styles !== undefined;
   const usedV2 = SUBTITLE_V2_KEYS.filter((k) => subtitle[k] !== undefined);
   if (hasLegacy && usedV2.length > 0) {
-    err(ctx, `${f}.styles`, `legacy "styles" cannot be combined with the flat subtitle style fields (${usedV2.join(", ")})`);
+    err(
+      ctx,
+      `${f}.styles`,
+      `legacy "styles" cannot be combined with the flat subtitle style fields (${usedV2.join(", ")})`,
+    );
   }
 
   if (subtitle.maxWordsPerLine !== undefined) {
-    checkNumber(ctx, `${f}.maxWordsPerLine`, subtitle.maxWordsPerLine, { min: 1, max: 20, integer: true });
+    checkNumber(ctx, `${f}.maxWordsPerLine`, subtitle.maxWordsPerLine, {
+      min: 1,
+      max: 20,
+      integer: true,
+    });
   }
-  if (subtitle.animation !== undefined) checkEnum(ctx, `${f}.animation`, subtitle.animation, SUBTITLE_ANIMATIONS);
-  if (subtitle.direction !== undefined) checkEnum(ctx, `${f}.direction`, subtitle.direction, SLIDE_DIRECTIONS);
-  if (subtitle.position !== undefined) checkEnum(ctx, `${f}.position`, subtitle.position, SUBTITLE_POSITIONS_V2);
+  if (subtitle.animation !== undefined)
+    checkEnum(ctx, `${f}.animation`, subtitle.animation, SUBTITLE_ANIMATIONS);
+  if (subtitle.direction !== undefined)
+    checkEnum(ctx, `${f}.direction`, subtitle.direction, SLIDE_DIRECTIONS);
+  if (subtitle.position !== undefined)
+    checkEnum(ctx, `${f}.position`, subtitle.position, SUBTITLE_POSITIONS_V2);
 
   if (subtitle.font !== undefined) {
     if (!isObj(subtitle.font) || Object.keys(subtitle.font).length < 1) {
-      err(ctx, `${f}.font`, `${f}.font must be an object with at least one property`);
+      err(
+        ctx,
+        `${f}.font`,
+        `${f}.font must be an object with at least one property`,
+      );
     } else {
       const fo = subtitle.font;
-      checkUnknownKeys(ctx, `${f}.font`, fo, new Set(["family", "size", "color", "bold", "italic", "transform"]));
-      if (fo.family !== undefined && (typeof fo.family !== "string" || !NAME_REGEX.test(fo.family) || fo.family.length > MAX_NAME_LEN))
-        err(ctx, `${f}.font.family`, `${f}.font.family must contain only letters, digits, spaces, _ and -`);
-      if (fo.size !== undefined) checkNumber(ctx, `${f}.font.size`, fo.size, { min: 1, max: MAX_FONT_SIZE });
-      if (fo.color !== undefined) checkHex(ctx, `${f}.font.color`, fo.color, true);
-      if (fo.bold !== undefined && typeof fo.bold !== "boolean") err(ctx, `${f}.font.bold`, `${f}.font.bold must be a boolean`);
-      if (fo.italic !== undefined && typeof fo.italic !== "boolean") err(ctx, `${f}.font.italic`, `${f}.font.italic must be a boolean`);
-      if (fo.transform !== undefined) checkEnum(ctx, `${f}.font.transform`, fo.transform, TEXT_TRANSFORMS);
+      checkUnknownKeys(
+        ctx,
+        `${f}.font`,
+        fo,
+        new Set(["family", "size", "color", "bold", "italic", "transform"]),
+      );
+      if (
+        fo.family !== undefined &&
+        (typeof fo.family !== "string" ||
+          !NAME_REGEX.test(fo.family) ||
+          fo.family.length > MAX_NAME_LEN)
+      )
+        err(
+          ctx,
+          `${f}.font.family`,
+          `${f}.font.family must contain only letters, digits, spaces, _ and -`,
+        );
+      if (fo.size !== undefined)
+        checkNumber(ctx, `${f}.font.size`, fo.size, {
+          min: 1,
+          max: MAX_FONT_SIZE,
+        });
+      if (fo.color !== undefined)
+        checkHex(ctx, `${f}.font.color`, fo.color, true);
+      if (fo.bold !== undefined && typeof fo.bold !== "boolean")
+        err(ctx, `${f}.font.bold`, `${f}.font.bold must be a boolean`);
+      if (fo.italic !== undefined && typeof fo.italic !== "boolean")
+        err(ctx, `${f}.font.italic`, `${f}.font.italic must be a boolean`);
+      if (fo.transform !== undefined)
+        checkEnum(ctx, `${f}.font.transform`, fo.transform, TEXT_TRANSFORMS);
     }
   }
   if (subtitle.stroke !== undefined) {
     if (!isObj(subtitle.stroke)) {
-      err(ctx, `${f}.stroke`, `${f}.stroke must be an object with color and width`);
+      err(
+        ctx,
+        `${f}.stroke`,
+        `${f}.stroke must be an object with color and width`,
+      );
     } else {
       const st = subtitle.stroke;
       checkUnknownKeys(ctx, `${f}.stroke`, st, new Set(["color", "width"]));
-      if (st.color === undefined) err(ctx, `${f}.stroke.color`, `${f}.stroke.color is required`);
+      if (st.color === undefined)
+        err(ctx, `${f}.stroke.color`, `${f}.stroke.color is required`);
       else checkHex(ctx, `${f}.stroke.color`, st.color, true);
-      if (st.width === undefined) err(ctx, `${f}.stroke.width`, `${f}.stroke.width is required`);
-      else checkNumber(ctx, `${f}.stroke.width`, st.width, { min: 0, max: MAX_OUTLINE_WIDTH });
+      if (st.width === undefined)
+        err(ctx, `${f}.stroke.width`, `${f}.stroke.width is required`);
+      else
+        checkNumber(ctx, `${f}.stroke.width`, st.width, {
+          min: 0,
+          max: MAX_OUTLINE_WIDTH,
+        });
     }
   }
   if (subtitle.background !== undefined) {
-    if (!isObj(subtitle.background) || Object.keys(subtitle.background).length < 1) {
-      err(ctx, `${f}.background`, `${f}.background must be an object with at least one property`);
+    if (
+      !isObj(subtitle.background) ||
+      Object.keys(subtitle.background).length < 1
+    ) {
+      err(
+        ctx,
+        `${f}.background`,
+        `${f}.background must be an object with at least one property`,
+      );
     } else {
       const bg = subtitle.background;
-      checkUnknownKeys(ctx, `${f}.background`, bg, new Set(["color", "opacity", "padding", "radius"]));
-      if (bg.color !== undefined) checkHex(ctx, `${f}.background.color`, bg.color, true);
-      if (bg.opacity !== undefined) checkNumber(ctx, `${f}.background.opacity`, bg.opacity, { min: 0, max: 1 });
-      if (bg.padding !== undefined) checkNumber(ctx, `${f}.background.padding`, bg.padding, { min: 0, max: 200 });
-      if (bg.radius !== undefined) checkNumber(ctx, `${f}.background.radius`, bg.radius, { min: 0, max: 200 });
+      checkUnknownKeys(
+        ctx,
+        `${f}.background`,
+        bg,
+        new Set(["color", "opacity", "padding", "radius"]),
+      );
+      if (bg.color !== undefined)
+        checkHex(ctx, `${f}.background.color`, bg.color, true);
+      if (bg.opacity !== undefined)
+        checkNumber(ctx, `${f}.background.opacity`, bg.opacity, {
+          min: 0,
+          max: 1,
+        });
+      if (bg.padding !== undefined)
+        checkNumber(ctx, `${f}.background.padding`, bg.padding, {
+          min: 0,
+          max: 200,
+        });
+      if (bg.radius !== undefined)
+        checkNumber(ctx, `${f}.background.radius`, bg.radius, {
+          min: 0,
+          max: 200,
+        });
     }
   }
-  if (subtitle.activeWord !== undefined) validateActiveWord(ctx, `${f}.activeWord`, subtitle.activeWord);
+  if (subtitle.activeWord !== undefined)
+    validateActiveWord(ctx, `${f}.activeWord`, subtitle.activeWord);
   if (subtitle.margin !== undefined) {
     if (!isObj(subtitle.margin) || Object.keys(subtitle.margin).length < 1) {
       err(ctx, `${f}.margin`, `${f}.margin must be an object with x and/or y`);
     } else {
       const mg = subtitle.margin;
       checkUnknownKeys(ctx, `${f}.margin`, mg, new Set(["x", "y"]));
-      if (mg.x !== undefined) checkNumber(ctx, `${f}.margin.x`, mg.x, { min: 0, max: L.maxOutputResolution, integer: true });
-      if (mg.y !== undefined) checkNumber(ctx, `${f}.margin.y`, mg.y, { min: 0, max: L.maxOutputResolution, integer: true });
+      if (mg.x !== undefined)
+        checkNumber(ctx, `${f}.margin.x`, mg.x, {
+          min: 0,
+          max: L.maxOutputResolution,
+          integer: true,
+        });
+      if (mg.y !== undefined)
+        checkNumber(ctx, `${f}.margin.y`, mg.y, {
+          min: 0,
+          max: L.maxOutputResolution,
+          integer: true,
+        });
     }
   }
 
@@ -1666,59 +3178,157 @@ function validateSubtitle(ctx: Ctx, subtitle: unknown) {
     if (!isObj(s)) {
       err(ctx, `${f}.styles`, `${f}.styles must be an object`);
     } else {
-      checkUnknownKeys(ctx, `${f}.styles`, s, new Set([
-        "color", "background", "backgroundPadding", "backgroundRadius", "isBold", "isItalic",
-        "fontSize", "fontFamily", "textTransform", "outline", "position", "marginV", "marginH",
-        "mode", "slideDirection", "activeWord",
-      ]));
-      if (s.color !== undefined) checkHex(ctx, `${f}.styles.color`, s.color, true);
-      if (s.background !== undefined) checkHex(ctx, `${f}.styles.background`, s.background, true);
-      if (s.backgroundPadding !== undefined) checkNumber(ctx, `${f}.styles.backgroundPadding`, s.backgroundPadding, { min: 0, max: 200 });
-      if (s.backgroundRadius !== undefined) checkNumber(ctx, `${f}.styles.backgroundRadius`, s.backgroundRadius, { min: 0, max: 200 });
-      if (s.isBold !== undefined && typeof s.isBold !== "boolean") err(ctx, `${f}.styles.isBold`, "isBold must be a boolean");
-      if (s.isItalic !== undefined && typeof s.isItalic !== "boolean") err(ctx, `${f}.styles.isItalic`, "isItalic must be a boolean");
-      if (s.fontSize !== undefined) checkNumber(ctx, `${f}.styles.fontSize`, s.fontSize, { min: 1, max: MAX_FONT_SIZE });
-      if (s.fontFamily !== undefined && (typeof s.fontFamily !== "string" || !NAME_REGEX.test(s.fontFamily) || s.fontFamily.length > MAX_NAME_LEN))
-        err(ctx, `${f}.styles.fontFamily`, `${f}.styles.fontFamily must contain only letters, digits, spaces, _ and -`);
-      if (s.textTransform !== undefined) checkEnum(ctx, `${f}.styles.textTransform`, s.textTransform, TEXT_TRANSFORMS);
-      if (s.position !== undefined) checkEnum(ctx, `${f}.styles.position`, s.position, SUBTITLE_POSITIONS);
-      if (s.marginV !== undefined) checkNumber(ctx, `${f}.styles.marginV`, s.marginV, { min: 0, max: L.maxOutputResolution, integer: true });
-      if (s.marginH !== undefined) checkNumber(ctx, `${f}.styles.marginH`, s.marginH, { min: 0, max: L.maxOutputResolution, integer: true });
-      if (s.mode !== undefined) checkEnum(ctx, `${f}.styles.mode`, s.mode, SUBTITLE_ANIMATIONS);
-      if (s.slideDirection !== undefined) checkEnum(ctx, `${f}.styles.slideDirection`, s.slideDirection, SLIDE_DIRECTIONS);
+      checkUnknownKeys(
+        ctx,
+        `${f}.styles`,
+        s,
+        new Set([
+          "color",
+          "background",
+          "backgroundPadding",
+          "backgroundRadius",
+          "isBold",
+          "isItalic",
+          "fontSize",
+          "fontFamily",
+          "textTransform",
+          "outline",
+          "position",
+          "marginV",
+          "marginH",
+          "mode",
+          "slideDirection",
+          "activeWord",
+        ]),
+      );
+      if (s.color !== undefined)
+        checkHex(ctx, `${f}.styles.color`, s.color, true);
+      if (s.background !== undefined)
+        checkHex(ctx, `${f}.styles.background`, s.background, true);
+      if (s.backgroundPadding !== undefined)
+        checkNumber(ctx, `${f}.styles.backgroundPadding`, s.backgroundPadding, {
+          min: 0,
+          max: 200,
+        });
+      if (s.backgroundRadius !== undefined)
+        checkNumber(ctx, `${f}.styles.backgroundRadius`, s.backgroundRadius, {
+          min: 0,
+          max: 200,
+        });
+      if (s.isBold !== undefined && typeof s.isBold !== "boolean")
+        err(ctx, `${f}.styles.isBold`, "isBold must be a boolean");
+      if (s.isItalic !== undefined && typeof s.isItalic !== "boolean")
+        err(ctx, `${f}.styles.isItalic`, "isItalic must be a boolean");
+      if (s.fontSize !== undefined)
+        checkNumber(ctx, `${f}.styles.fontSize`, s.fontSize, {
+          min: 1,
+          max: MAX_FONT_SIZE,
+        });
+      if (
+        s.fontFamily !== undefined &&
+        (typeof s.fontFamily !== "string" ||
+          !NAME_REGEX.test(s.fontFamily) ||
+          s.fontFamily.length > MAX_NAME_LEN)
+      )
+        err(
+          ctx,
+          `${f}.styles.fontFamily`,
+          `${f}.styles.fontFamily must contain only letters, digits, spaces, _ and -`,
+        );
+      if (s.textTransform !== undefined)
+        checkEnum(
+          ctx,
+          `${f}.styles.textTransform`,
+          s.textTransform,
+          TEXT_TRANSFORMS,
+        );
+      if (s.position !== undefined)
+        checkEnum(ctx, `${f}.styles.position`, s.position, SUBTITLE_POSITIONS);
+      if (s.marginV !== undefined)
+        checkNumber(ctx, `${f}.styles.marginV`, s.marginV, {
+          min: 0,
+          max: L.maxOutputResolution,
+          integer: true,
+        });
+      if (s.marginH !== undefined)
+        checkNumber(ctx, `${f}.styles.marginH`, s.marginH, {
+          min: 0,
+          max: L.maxOutputResolution,
+          integer: true,
+        });
+      if (s.mode !== undefined)
+        checkEnum(ctx, `${f}.styles.mode`, s.mode, SUBTITLE_ANIMATIONS);
+      if (s.slideDirection !== undefined)
+        checkEnum(
+          ctx,
+          `${f}.styles.slideDirection`,
+          s.slideDirection,
+          SLIDE_DIRECTIONS,
+        );
       if (s.outline !== undefined) {
         if (!isObj(s.outline)) {
-          err(ctx, `${f}.styles.outline`, "outline must be an object with width and color");
+          err(
+            ctx,
+            `${f}.styles.outline`,
+            "outline must be an object with width and color",
+          );
         } else {
-          if (s.outline.width === undefined) err(ctx, `${f}.styles.outline.width`, "outline.width is required");
-          else checkNumber(ctx, `${f}.styles.outline.width`, s.outline.width, { min: 0, max: MAX_OUTLINE_WIDTH });
-          if (s.outline.color === undefined) err(ctx, `${f}.styles.outline.color`, "outline.color is required");
-          else checkHex(ctx, `${f}.styles.outline.color`, s.outline.color, true);
+          if (s.outline.width === undefined)
+            err(ctx, `${f}.styles.outline.width`, "outline.width is required");
+          else
+            checkNumber(ctx, `${f}.styles.outline.width`, s.outline.width, {
+              min: 0,
+              max: MAX_OUTLINE_WIDTH,
+            });
+          if (s.outline.color === undefined)
+            err(ctx, `${f}.styles.outline.color`, "outline.color is required");
+          else
+            checkHex(ctx, `${f}.styles.outline.color`, s.outline.color, true);
         }
       }
-      if (s.activeWord !== undefined) validateActiveWord(ctx, `${f}.styles.activeWord`, s.activeWord);
+      if (s.activeWord !== undefined)
+        validateActiveWord(ctx, `${f}.styles.activeWord`, s.activeWord);
     }
   }
 }
 
-const SCENE_KEYS = new Set(["id", "duration", "transition", "transitionId", "transitionDuration", "backgroundColor", "visuals", "audios"]);
+const SCENE_KEYS = new Set([
+  "id",
+  "duration",
+  "transition",
+  "transitionId",
+  "transitionDuration",
+  "backgroundColor",
+  "visuals",
+  "audios",
+]);
 
 /** Mirror of templateEngine.transitionOverlap — see the note in VALIDATION_NOTES. */
-function transitionOverlap(scene: Record<string, unknown>, index: number, scenes: Record<string, unknown>[]): number {
+function transitionOverlap(
+  scene: Record<string, unknown>,
+  index: number,
+  scenes: Record<string, unknown>[],
+): number {
   if (!scene.transition) return 0;
   const next = scenes[index + 1];
   if (!next) return 0;
   const nextId = (next.id as string | undefined) ?? `scene-${index + 1}`;
   const tid = scene.transitionId;
-  const pointsToNext = tid === undefined || tid === null || tid === "none" || tid === nextId;
+  const pointsToNext =
+    tid === undefined || tid === null || tid === "none" || tid === nextId;
   if (!pointsToNext) return 0;
-  return typeof scene.transitionDuration === "number" ? scene.transitionDuration : 0.5;
+  return typeof scene.transitionDuration === "number"
+    ? scene.transitionDuration
+    : 0.5;
 }
 
-export function computeScenesTotalDuration(scenes: Array<Record<string, unknown>>): number {
+export function computeScenesTotalDuration(
+  scenes: Array<Record<string, unknown>>,
+): number {
   let total = 0;
   for (let i = 0; i < scenes.length; i++) {
-    total += (scenes[i].duration as number) - transitionOverlap(scenes[i], i, scenes);
+    total +=
+      (scenes[i].duration as number) - transitionOverlap(scenes[i], i, scenes);
   }
   return Math.round(total * 100) / 100;
 }
@@ -1729,7 +3339,11 @@ export function computeScenesTotalDuration(scenes: Array<Record<string, unknown>
 // lib/texts/buildHtmlContent.ts). Valid-but-ugly payloads get warnings here.
 // ---------------------------------------------------------------------------
 
-type VisualEntry = { v: Record<string, unknown>; type: ElementType | null; field: string };
+type VisualEntry = {
+  v: Record<string, unknown>;
+  type: ElementType | null;
+  field: string;
+};
 type Rect = { x0: number; y0: number; x1: number; y1: number };
 type Canvas = { w: number; h: number };
 
@@ -1746,7 +3360,10 @@ const PRESET_FRACTIONS: Record<string, [number, number]> = {
 };
 
 /** Bounding box the renderer will use, or null when it can't be known. */
-function rectOf(v: Record<string, unknown>, canvas: Canvas | null): Rect | null {
+function rectOf(
+  v: Record<string, unknown>,
+  canvas: Canvas | null,
+): Rect | null {
   const w = isNum(v.width) ? v.width : null;
   const h = isNum(v.height) ? v.height : null;
   if (w == null || h == null) return null;
@@ -1775,7 +3392,11 @@ function rectOf(v: Record<string, unknown>, canvas: Canvas | null): Rect | null 
 
 function hexToRgb(hex: string): [number, number, number] | null {
   let s = hex.replace(/^#/, "");
-  if (s.length === 3) s = s.split("").map((c) => c + c).join("");
+  if (s.length === 3)
+    s = s
+      .split("")
+      .map((c) => c + c)
+      .join("");
   if (s.length !== 6) return null;
   const n = parseInt(s, 16);
   if (Number.isNaN(n)) return null;
@@ -1811,13 +3432,18 @@ function canvasCoverage(rect: Rect, canvas: Canvas): number {
   return (ix * iy) / (canvas.w * canvas.h);
 }
 
-function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas | null; bg?: string }) {
+function lintContainer(
+  ctx: Ctx,
+  entries: VisualEntry[],
+  opts: { canvas: Canvas | null; bg?: string },
+) {
   const { canvas } = opts;
   const rects = new Map<VisualEntry, Rect | null>();
   for (const e of entries) rects.set(e, rectOf(e.v, canvas));
 
   const isBackdrop = (e: VisualEntry): boolean => {
-    if (e.type === "IMAGE" || e.type === "VIDEO" || e.type === "GIF") return true;
+    if (e.type === "IMAGE" || e.type === "VIDEO" || e.type === "GIF")
+      return true;
     // scrim / full-canvas colored layer
     const rect = rects.get(e);
     if (!rect || !canvas || canvasCoverage(rect, canvas) < 0.85) return false;
@@ -1833,19 +3459,19 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
       warn(
         ctx,
         field,
-        `${field}: x/y are IGNORED because position "${pos}" overwrites them — the element will render at the preset point. Use position: "custom" (with anchor) for offset placement`
+        `${field}: x/y are IGNORED because position "${pos}" overwrites them — the element will render at the preset point. Use position: "custom" (with anchor) for offset placement`,
       );
     }
 
     if (e.type === "TEXT" && isObj(v.style)) {
       const hasPadding = Object.keys(v.style).some((k) =>
-        k.toLowerCase().replace(/-/g, "").startsWith("padding")
+        k.toLowerCase().replace(/-/g, "").startsWith("padding"),
       );
       if (hasPadding) {
         warn(
           ctx,
           `${field}.style`,
-          `${field}.style uses padding, which renders OUTSIDE the declared width/height (the renderer is box-sizing: content-box) and can get cut off — set the full size via width/height and center the content with display: "flex", alignItems: "center", justifyContent: "center" instead`
+          `${field}.style uses padding, which renders OUTSIDE the declared width/height (the renderer is box-sizing: content-box) and can get cut off — set the full size via width/height and center the content with display: "flex", alignItems: "center", justifyContent: "center" instead`,
         );
       }
     }
@@ -1854,31 +3480,56 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
 
     if (rect && canvas) {
       const over: string[] = [];
-      if (rect.x0 < -2) over.push(`${Math.round(-rect.x0)}px past the left edge`);
-      if (rect.y0 < -2) over.push(`${Math.round(-rect.y0)}px past the top edge`);
-      if (rect.x1 > canvas.w + 2) over.push(`${Math.round(rect.x1 - canvas.w)}px past the right edge`);
-      if (rect.y1 > canvas.h + 2) over.push(`${Math.round(rect.y1 - canvas.h)}px past the bottom edge`);
+      if (rect.x0 < -2)
+        over.push(`${Math.round(-rect.x0)}px past the left edge`);
+      if (rect.y0 < -2)
+        over.push(`${Math.round(-rect.y0)}px past the top edge`);
+      if (rect.x1 > canvas.w + 2)
+        over.push(`${Math.round(rect.x1 - canvas.w)}px past the right edge`);
+      if (rect.y1 > canvas.h + 2)
+        over.push(`${Math.round(rect.y1 - canvas.h)}px past the bottom edge`);
       if (over.length) {
-        warn(ctx, field, `${field} extends ${over.join(" and ")} — that part will be cut off`);
+        warn(
+          ctx,
+          field,
+          `${field} extends ${over.join(" and ")} — that part will be cut off`,
+        );
       }
     }
 
     // contrast vs a solid background (skipped when media or a scrim layer sits
     // underneath — then the effective background isn't the solid color)
-    if (e.type === "TEXT" && !entries.some((other) => other !== e && isBackdrop(other))) {
+    if (
+      e.type === "TEXT" &&
+      !entries.some((other) => other !== e && isBackdrop(other))
+    ) {
       const style = isObj(v.style) ? v.style : undefined;
-      const rawColor = style && typeof style.color === "string" ? style.color : undefined;
-      const ownBg = style && typeof style.backgroundColor === "string" ? style.backgroundColor : undefined;
-      const bgHex = ownBg && HEX_COLOR.test(ownBg) ? ownBg : opts.bg && HEX_COLOR.test(opts.bg) ? opts.bg : "#ffffff";
+      const rawColor =
+        style && typeof style.color === "string" ? style.color : undefined;
+      const ownBg =
+        style && typeof style.backgroundColor === "string"
+          ? style.backgroundColor
+          : undefined;
+      const bgHex =
+        ownBg && HEX_COLOR.test(ownBg)
+          ? ownBg
+          : opts.bg && HEX_COLOR.test(opts.bg)
+            ? opts.bg
+            : "#ffffff";
       // renderer default text color is black
-      const fgHex = rawColor === undefined ? "#000000" : HEX_COLOR.test(rawColor) ? rawColor : null;
+      const fgHex =
+        rawColor === undefined
+          ? "#000000"
+          : HEX_COLOR.test(rawColor)
+            ? rawColor
+            : null;
       if (fgHex) {
         const ratio = contrastRatio(fgHex, bgHex);
         if (ratio !== null && ratio < 3) {
           warn(
             ctx,
             field,
-            `${field}: low contrast (${ratio.toFixed(1)}:1) between text ${fgHex} and background ${bgHex} — aim for at least 4.5:1 or put the text on a card/scrim`
+            `${field}: low contrast (${ratio.toFixed(1)}:1) between text ${fgHex} and background ${bgHex} — aim for at least 4.5:1 or put the text on a card/scrim`,
           );
         }
       }
@@ -1899,7 +3550,11 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
       const ra = rects.get(a) ?? null;
       const rb = rects.get(b) ?? null;
       // full-canvas layers are scrims/backgrounds — collisions with them are intentional
-      if (canvas && ((ra && canvasCoverage(ra, canvas) >= 0.85) || (rb && canvasCoverage(rb, canvas) >= 0.85))) {
+      if (
+        canvas &&
+        ((ra && canvasCoverage(ra, canvas) >= 0.85) ||
+          (rb && canvasCoverage(rb, canvas) >= 0.85))
+      ) {
         continue;
       }
 
@@ -1909,7 +3564,11 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
 
       let overlapping = false;
       if (ra && rb) {
-        overlapping = ra.x0 < rb.x1 - 4 && rb.x0 < ra.x1 - 4 && ra.y0 < rb.y1 - 4 && rb.y0 < ra.y1 - 4;
+        overlapping =
+          ra.x0 < rb.x1 - 4 &&
+          rb.x0 < ra.x1 - 4 &&
+          ra.y0 < rb.y1 - 4 &&
+          rb.y0 < ra.y1 - 4;
       } else {
         const pa = typeof a.v.position === "string" ? a.v.position : undefined;
         const pb = typeof b.v.position === "string" ? b.v.position : undefined;
@@ -1919,7 +3578,7 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
         warn(
           ctx,
           b.field,
-          `${a.field} and ${b.field} overlap on screen at the same time — give each its own region (different presets or position: "custom" coordinates), split them into scenes, or put headline + subline inside ONE element's html`
+          `${a.field} and ${b.field} overlap on screen at the same time — give each its own region (different presets or position: "custom" coordinates), split them into scenes, or put headline + subline inside ONE element's html`,
         );
       }
     }
@@ -1927,18 +3586,46 @@ function lintContainer(ctx: Ctx, entries: VisualEntry[], opts: { canvas: Canvas 
 }
 
 const PROJECT_KEYS = new Set([
-  "type", "name", "resolution", "width", "height", "duration", "frameRate",
-  "outputFormat", "backgroundColor", "snapshotTime", "quality", "transparent",
-  "visuals", "audios", "scenes", "thumbnail", "subtitle",
+  "type",
+  "name",
+  "resolution",
+  "width",
+  "height",
+  "duration",
+  "frameRate",
+  "outputFormat",
+  "backgroundColor",
+  "snapshotTime",
+  "quality",
+  "transparent",
+  "visuals",
+  "audios",
+  "scenes",
+  "thumbnail",
+  "subtitle",
   // template-authoring keys resolved server-side before validation:
   "variables",
 ]);
 
-const IMAGE_FORBIDDEN_TOP = ["duration", "frameRate", "audios", "scenes", "thumbnail", "subtitle"] as const;
+const IMAGE_FORBIDDEN_TOP = [
+  "duration",
+  "frameRate",
+  "audios",
+  "scenes",
+  "thumbnail",
+  "subtitle",
+] as const;
 const IMAGE_FORBIDDEN_ITEM_FIELDS = [
-  "enterBegin", "enterEnd", "exitBegin", "exitEnd",
-  "videoBegin", "videoEnd", "videoDuration",
-  "transition", "transitionId", "transitionDuration",
+  "enterBegin",
+  "enterEnd",
+  "exitBegin",
+  "exitEnd",
+  "videoBegin",
+  "videoEnd",
+  "videoDuration",
+  "transition",
+  "transitionId",
+  "transitionDuration",
 ] as const;
 
 /**
@@ -1947,7 +3634,7 @@ const IMAGE_FORBIDDEN_ITEM_FIELDS = [
  */
 export function validateProject(
   payload: unknown,
-  options: { limits?: Partial<PlanLimits> } = {}
+  options: { limits?: Partial<PlanLimits> } = {},
 ): ValidationResult {
   const ctx: Ctx = {
     errors: [],
@@ -1964,7 +3651,11 @@ export function validateProject(
   const p = payload;
   checkUnknownKeys(ctx, "payload", p, PROJECT_KEYS);
   if (p.variables !== undefined) {
-    warn(ctx, "payload.variables", "\"variables\" only has effect when the project is used as a TEMPLATE (placeholders are resolved server-side before validation)");
+    warn(
+      ctx,
+      "payload.variables",
+      '"variables" only has effect when the project is used as a TEMPLATE (placeholders are resolved server-side before validation)',
+    );
   }
 
   // type
@@ -1974,53 +3665,109 @@ export function validateProject(
   }
 
   if (p.name !== undefined) {
-    if (typeof p.name !== "string" || !NAME_REGEX.test(p.name) || p.name.length > MAX_NAME_LEN) {
-      err(ctx, "name", "name may only contain letters, digits, spaces, _ and - (max 1000 chars)");
+    if (
+      typeof p.name !== "string" ||
+      !NAME_REGEX.test(p.name) ||
+      p.name.length > MAX_NAME_LEN
+    ) {
+      err(
+        ctx,
+        "name",
+        "name may only contain letters, digits, spaces, _ and - (max 1000 chars)",
+      );
     }
   }
-  if (p.resolution !== undefined) checkEnum(ctx, "resolution", p.resolution, RESOLUTION_PRESETS);
-  if (p.width !== undefined) checkNumber(ctx, "width", p.width, { min: 1, max: L.maxOutputResolution, integer: true });
-  if (p.height !== undefined) checkNumber(ctx, "height", p.height, { min: 1, max: L.maxOutputResolution, integer: true });
-  if (p.backgroundColor !== undefined) checkHex(ctx, "backgroundColor", p.backgroundColor);
+  if (p.resolution !== undefined)
+    checkEnum(ctx, "resolution", p.resolution, RESOLUTION_PRESETS);
+  if (p.width !== undefined)
+    checkNumber(ctx, "width", p.width, {
+      min: 1,
+      max: L.maxOutputResolution,
+      integer: true,
+    });
+  if (p.height !== undefined)
+    checkNumber(ctx, "height", p.height, {
+      min: 1,
+      max: L.maxOutputResolution,
+      integer: true,
+    });
+  if (p.backgroundColor !== undefined)
+    checkHex(ctx, "backgroundColor", p.backgroundColor);
 
   // type-branched fields
   if (isImage) {
     for (const k of IMAGE_FORBIDDEN_TOP) {
       if (p[k] !== undefined) {
-        err(ctx, k, k === "thumbnail"
-          ? '"thumbnail" is not applicable to image renders (the image is its own thumbnail)'
-          : `"${k}" is not applicable to image renders`);
+        err(
+          ctx,
+          k,
+          k === "thumbnail"
+            ? '"thumbnail" is not applicable to image renders (the image is its own thumbnail)'
+            : `"${k}" is not applicable to image renders`,
+        );
       }
     }
     if (p.outputFormat !== undefined) {
       checkEnum(ctx, "outputFormat", p.outputFormat, IMAGE_OUTPUT_FORMATS);
     }
-    if (p.snapshotTime !== undefined) checkNumber(ctx, "snapshotTime", p.snapshotTime, { min: 0, max: 3600 });
-    if (p.quality !== undefined) checkNumber(ctx, "quality", p.quality, { min: 1, max: 100, integer: true });
+    if (p.snapshotTime !== undefined)
+      checkNumber(ctx, "snapshotTime", p.snapshotTime, { min: 0, max: 3600 });
+    if (p.quality !== undefined)
+      checkNumber(ctx, "quality", p.quality, {
+        min: 1,
+        max: 100,
+        integer: true,
+      });
     if (p.transparent !== undefined && typeof p.transparent !== "boolean") {
       err(ctx, "transparent", "transparent must be a boolean");
     }
     const fmt = String(p.outputFormat ?? "png").toLowerCase();
     if (p.transparent === true && (fmt === "jpg" || fmt === "jpeg")) {
-      err(ctx, "transparent", "transparent is not supported with jpg output (jpg has no alpha channel); use png or webp");
+      err(
+        ctx,
+        "transparent",
+        "transparent is not supported with jpg output (jpg has no alpha channel); use png or webp",
+      );
     }
     if (p.quality !== undefined && fmt === "png") {
-      err(ctx, "quality", "quality applies to jpg/webp outputs only (png is lossless)");
+      err(
+        ctx,
+        "quality",
+        "quality applies to jpg/webp outputs only (png is lossless)",
+      );
     }
   } else {
     for (const k of ["snapshotTime", "quality", "transparent"] as const) {
       if (p[k] !== undefined) {
-        err(ctx, k, `"${k}" is only applicable to image renders (type: "image")`);
+        err(
+          ctx,
+          k,
+          `"${k}" is only applicable to image renders (type: "image")`,
+        );
       }
     }
-    if (p.duration !== undefined) checkNumber(ctx, "duration", p.duration, { min: 0.1, max: L.maxDuration });
-    if (p.frameRate !== undefined) checkNumber(ctx, "frameRate", p.frameRate, { min: 1, max: 60, integer: true });
-    if (p.outputFormat !== undefined) checkEnum(ctx, "outputFormat", p.outputFormat, VIDEO_OUTPUT_FORMATS);
+    if (p.duration !== undefined)
+      checkNumber(ctx, "duration", p.duration, {
+        min: 0.1,
+        max: L.maxDuration,
+      });
+    if (p.frameRate !== undefined)
+      checkNumber(ctx, "frameRate", p.frameRate, {
+        min: 1,
+        max: 60,
+        integer: true,
+      });
+    if (p.outputFormat !== undefined)
+      checkEnum(ctx, "outputFormat", p.outputFormat, VIDEO_OUTPUT_FORMATS);
     if (p.thumbnail !== undefined) checkUrlField(ctx, "thumbnail", p.thumbnail);
   }
 
   // visuals
-  const topVisuals: Array<{ v: Record<string, unknown>; type: ElementType | null; field: string }> = [];
+  const topVisuals: Array<{
+    v: Record<string, unknown>;
+    type: ElementType | null;
+    field: string;
+  }> = [];
   if (p.visuals !== undefined) {
     if (!Array.isArray(p.visuals)) {
       err(ctx, "visuals", "visuals must be an array");
@@ -2038,12 +3785,18 @@ export function validateProject(
     if (!Array.isArray(p.audios)) {
       err(ctx, "audios", "audios must be an array");
     } else {
-      p.audios.forEach((a: unknown, i: number) => validateAudio(ctx, `audios[${i}]`, a));
+      p.audios.forEach((a: unknown, i: number) =>
+        validateAudio(ctx, `audios[${i}]`, a),
+      );
     }
   }
 
   // scenes
-  const sceneVisuals: Array<{ v: Record<string, unknown>; type: ElementType | null; field: string }> = [];
+  const sceneVisuals: Array<{
+    v: Record<string, unknown>;
+    type: ElementType | null;
+    field: string;
+  }> = [];
   const sceneLintGroups: Array<{ entries: VisualEntry[]; bg?: string }> = [];
   let sceneAudioCount = 0;
   let validScenes: Record<string, unknown>[] = [];
@@ -2052,7 +3805,11 @@ export function validateProject(
       err(ctx, "scenes", "scenes must be an array");
     } else {
       if (p.scenes.length > L.maxScenes) {
-        err(ctx, "scenes", `Max scenes allowed is ${L.maxScenes} (based on your ${L.planName} plan)`);
+        err(
+          ctx,
+          "scenes",
+          `Max scenes allowed is ${L.maxScenes} (based on your ${L.planName} plan)`,
+        );
       }
       p.scenes.forEach((s: unknown, i: number) => {
         const sf = `scenes[${i}]`;
@@ -2062,22 +3819,53 @@ export function validateProject(
         }
         validScenes.push(s);
         checkUnknownKeys(ctx, sf, s, SCENE_KEYS);
-        if (s.id !== undefined && (typeof s.id !== "string" || !ID_REGEX.test(s.id) || s.id.length > MAX_ID_LEN)) {
-          err(ctx, `${sf}.id`, `${sf}.id must match ${ID_REGEX} (max ${MAX_ID_LEN} chars)`);
+        if (
+          s.id !== undefined &&
+          (typeof s.id !== "string" ||
+            !ID_REGEX.test(s.id) ||
+            s.id.length > MAX_ID_LEN)
+        ) {
+          err(
+            ctx,
+            `${sf}.id`,
+            `${sf}.id must match ${ID_REGEX} (max ${MAX_ID_LEN} chars)`,
+          );
         }
         if (s.duration !== undefined) {
-          if (!isNum(s.duration) || (s.duration !== -1 && (s.duration < 0.1 || s.duration > L.maxDuration))) {
-            err(ctx, `${sf}.duration`, `${sf}.duration must be -1 (auto) or between 0.1 and ${L.maxDuration} seconds`);
+          if (
+            !isNum(s.duration) ||
+            (s.duration !== -1 &&
+              (s.duration < 0.1 || s.duration > L.maxDuration))
+          ) {
+            err(
+              ctx,
+              `${sf}.duration`,
+              `${sf}.duration must be -1 (auto) or between 0.1 and ${L.maxDuration} seconds`,
+            );
           }
         }
-        if (s.transition !== undefined) checkEnum(ctx, `${sf}.transition`, s.transition, XFADE_EFFECTS, true);
+        if (s.transition !== undefined)
+          checkEnum(ctx, `${sf}.transition`, s.transition, XFADE_EFFECTS, true);
         if (s.transitionId !== undefined && s.transitionId !== null) {
-          if (typeof s.transitionId !== "string" || !ID_REGEX.test(s.transitionId) || s.transitionId.length > MAX_ID_LEN) {
-            err(ctx, `${sf}.transitionId`, `${sf}.transitionId must match ${ID_REGEX} (max ${MAX_ID_LEN} chars) or null`);
+          if (
+            typeof s.transitionId !== "string" ||
+            !ID_REGEX.test(s.transitionId) ||
+            s.transitionId.length > MAX_ID_LEN
+          ) {
+            err(
+              ctx,
+              `${sf}.transitionId`,
+              `${sf}.transitionId must match ${ID_REGEX} (max ${MAX_ID_LEN} chars) or null`,
+            );
           }
         }
-        if (s.transitionDuration !== undefined) checkNumber(ctx, `${sf}.transitionDuration`, s.transitionDuration, { min: 0, max: 60 });
-        if (s.backgroundColor !== undefined) checkHex(ctx, `${sf}.backgroundColor`, s.backgroundColor);
+        if (s.transitionDuration !== undefined)
+          checkNumber(ctx, `${sf}.transitionDuration`, s.transitionDuration, {
+            min: 0,
+            max: 60,
+          });
+        if (s.backgroundColor !== undefined)
+          checkHex(ctx, `${sf}.backgroundColor`, s.backgroundColor);
         if (s.visuals !== undefined) {
           if (!Array.isArray(s.visuals)) {
             err(ctx, `${sf}.visuals`, `${sf}.visuals must be an array`);
@@ -2094,7 +3882,10 @@ export function validateProject(
             });
             sceneLintGroups.push({
               entries,
-              bg: typeof s.backgroundColor === "string" ? s.backgroundColor : undefined,
+              bg:
+                typeof s.backgroundColor === "string"
+                  ? s.backgroundColor
+                  : undefined,
             });
           }
         }
@@ -2103,7 +3894,9 @@ export function validateProject(
             err(ctx, `${sf}.audios`, `${sf}.audios must be an array`);
           } else {
             sceneAudioCount += s.audios.length;
-            s.audios.forEach((a: unknown, ai: number) => validateAudio(ctx, `${sf}.audios[${ai}]`, a));
+            s.audios.forEach((a: unknown, ai: number) =>
+              validateAudio(ctx, `${sf}.audios[${ai}]`, a),
+            );
           }
         }
       });
@@ -2111,11 +3904,17 @@ export function validateProject(
       // total duration when all scenes are explicit
       const allExplicit =
         validScenes.length > 0 &&
-        validScenes.every((s) => isNum(s.duration) && (s.duration as number) > 0);
+        validScenes.every(
+          (s) => isNum(s.duration) && (s.duration as number) > 0,
+        );
       if (allExplicit) {
         const total = computeScenesTotalDuration(validScenes);
         if (total > L.maxDuration) {
-          err(ctx, "scenes", `Total scenes duration (${total}s) cannot exceed ${L.maxDuration} seconds (based on your ${L.planName} plan)`);
+          err(
+            ctx,
+            "scenes",
+            `Total scenes duration (${total}s) cannot exceed ${L.maxDuration} seconds (based on your ${L.planName} plan)`,
+          );
         }
       }
     }
@@ -2126,12 +3925,20 @@ export function validateProject(
     topVisuals.forEach(({ v, field }) => {
       const t = typeof v.type === "string" ? v.type.toLowerCase() : "";
       if (t === "video" || t === "gif") {
-        err(ctx, `${field}.type`, `${t} elements are not allowed in image projects — image canvases compose static sources only (image, text, svg)`);
+        err(
+          ctx,
+          `${field}.type`,
+          `${t} elements are not allowed in image projects — image canvases compose static sources only (image, text, svg)`,
+        );
         return;
       }
       for (const fieldName of IMAGE_FORBIDDEN_ITEM_FIELDS) {
         if (v[fieldName] !== undefined) {
-          err(ctx, `${field}.${fieldName}`, `"${fieldName}" is not applicable to image renders (visual elements are always on)`);
+          err(
+            ctx,
+            `${field}.${fieldName}`,
+            `"${fieldName}" is not applicable to image renders (visual elements are always on)`,
+          );
         }
       }
     });
@@ -2150,20 +3957,39 @@ export function validateProject(
 
   // plan-based media-type counts
   const countOf = (t: string) =>
-    allVisuals.filter(({ v }) => typeof v.type === "string" && v.type.toLowerCase() === t).length;
+    allVisuals.filter(
+      ({ v }) => typeof v.type === "string" && v.type.toLowerCase() === t,
+    ).length;
   if (countOf("image") > L.maxImagesCount) {
-    err(ctx, "visuals", `Max images allowed is ${L.maxImagesCount} (based on your ${L.planName} plan)`);
+    err(
+      ctx,
+      "visuals",
+      `Max images allowed is ${L.maxImagesCount} (based on your ${L.planName} plan)`,
+    );
   }
   if (countOf("video") > L.maxVideosCount) {
-    err(ctx, "visuals", `Max videos allowed is ${L.maxVideosCount} (based on your ${L.planName} plan)`);
+    err(
+      ctx,
+      "visuals",
+      `Max videos allowed is ${L.maxVideosCount} (based on your ${L.planName} plan)`,
+    );
   }
   if (countOf("gif") > L.maxGifsCount) {
-    err(ctx, "visuals", `Max gifs allowed is ${L.maxGifsCount} (based on your ${L.planName} plan)`);
+    err(
+      ctx,
+      "visuals",
+      `Max gifs allowed is ${L.maxGifsCount} (based on your ${L.planName} plan)`,
+    );
   }
 
-  const audioCount = (Array.isArray(p.audios) ? p.audios.length : 0) + sceneAudioCount;
+  const audioCount =
+    (Array.isArray(p.audios) ? p.audios.length : 0) + sceneAudioCount;
   if (audioCount > L.maxAudioElements) {
-    err(ctx, "audios", `Max audios allowed is ${L.maxAudioElements} (based on your ${L.planName} plan)`);
+    err(
+      ctx,
+      "audios",
+      `Max audios allowed is ${L.maxAudioElements} (based on your ${L.planName} plan)`,
+    );
   }
 
   // subtitle
@@ -2173,59 +3999,101 @@ export function validateProject(
 
   // ---- layout lint (professional-output warnings, never errors) ----
   // Canvas is only known when no resolution preset overrides width/height.
-  const resolutionIsPreset = typeof p.resolution === "string" && p.resolution !== "custom";
+  const resolutionIsPreset =
+    typeof p.resolution === "string" && p.resolution !== "custom";
   const lintCanvas: Canvas | null = resolutionIsPreset
     ? null
-    : { w: isNum(p.width) ? p.width : 1280, h: isNum(p.height) ? p.height : 720 };
-  const projectBg = typeof p.backgroundColor === "string" ? p.backgroundColor : undefined;
+    : {
+        w: isNum(p.width) ? p.width : 1280,
+        h: isNum(p.height) ? p.height : 720,
+      };
+  const projectBg =
+    typeof p.backgroundColor === "string" ? p.backgroundColor : undefined;
   lintContainer(ctx, topVisuals, { canvas: lintCanvas, bg: projectBg });
   for (const group of sceneLintGroups) {
-    lintContainer(ctx, group.entries, { canvas: lintCanvas, bg: group.bg ?? projectBg });
+    lintContainer(ctx, group.entries, {
+      canvas: lintCanvas,
+      bg: group.bg ?? projectBg,
+    });
   }
 
-  return { valid: ctx.errors.length === 0, errors: ctx.errors, warnings: ctx.warnings };
+  return {
+    valid: ctx.errors.length === 0,
+    errors: ctx.errors,
+    warnings: ctx.warnings,
+  };
 }
 
 /** Validate a full render REQUEST body ({ payload } or { template, variables }). */
 export function validateRenderRequest(
   body: unknown,
-  options: { limits?: Partial<PlanLimits> } = {}
+  options: { limits?: Partial<PlanLimits> } = {},
 ): ValidationResult {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
   if (!isObj(body)) {
-    return { valid: false, errors: [{ field: "body", message: "Request body must be a JSON object" }], warnings };
+    return {
+      valid: false,
+      errors: [
+        { field: "body", message: "Request body must be a JSON object" },
+      ],
+      warnings,
+    };
   }
   const hasPayload = body.payload !== undefined;
   const hasTemplate = body.template !== undefined;
   if (hasPayload === hasTemplate) {
     errors.push({
       field: "body",
-      message: 'Provide either "payload" (full project) or "template" (stored template id), not both',
+      message:
+        'Provide either "payload" (full project) or "template" (stored template id), not both',
     });
   }
-  if (hasTemplate && (typeof body.template !== "string" || !TEMPLATE_ID_REGEX.test(body.template))) {
-    errors.push({ field: "template", message: 'Invalid template id format (expected "tpl_" + 20 alphanumerics)' });
+  if (
+    hasTemplate &&
+    (typeof body.template !== "string" ||
+      !TEMPLATE_ID_REGEX.test(body.template))
+  ) {
+    errors.push({
+      field: "template",
+      message:
+        'Invalid template id format (expected "tpl_" + 20 alphanumerics)',
+    });
   }
   if (body.variables !== undefined && !isObj(body.variables)) {
-    errors.push({ field: "variables", message: "variables must be an object keyed by variable name" });
+    errors.push({
+      field: "variables",
+      message: "variables must be an object keyed by variable name",
+    });
   }
   if (body.webhookUrl !== undefined) {
     const problem = checkRemoteUrl(body.webhookUrl);
-    if (problem) errors.push({ field: "webhookUrl", message: `webhookUrl ${problem}` });
+    if (problem)
+      errors.push({ field: "webhookUrl", message: `webhookUrl ${problem}` });
   }
   if (body.overrides !== undefined && !isObj(body.overrides)) {
     errors.push({ field: "overrides", message: "overrides must be an object" });
   }
   if (hasPayload && !hasTemplate) {
     const res = validateProject(body.payload, options);
-    errors.push(...res.errors.map((e) => ({ field: e.field === "payload" ? e.field : `payload.${e.field}`, message: e.message })));
-    warnings.push(...res.warnings.map((w) => ({ field: w.field.startsWith("payload") ? w.field : `payload.${w.field}`, message: w.message })));
+    errors.push(
+      ...res.errors.map((e) => ({
+        field: e.field === "payload" ? e.field : `payload.${e.field}`,
+        message: e.message,
+      })),
+    );
+    warnings.push(
+      ...res.warnings.map((w) => ({
+        field: w.field.startsWith("payload") ? w.field : `payload.${w.field}`,
+        message: w.message,
+      })),
+    );
   }
   if (hasTemplate) {
     warnings.push({
       field: "template",
-      message: "Template renders resolve variables server-side before validation — use the template preview endpoint (or preview_template tool) for a full free dry run.",
+      message:
+        "Template renders resolve variables server-side before validation — use the template preview endpoint (or preview_template tool) for a full free dry run.",
     });
   }
   return { valid: errors.length === 0, errors, warnings };
@@ -2259,20 +4127,34 @@ function clamp(v: number, min: number, max: number): number {
  */
 export function repairProject(
   payload: unknown,
-  options: { limits?: Partial<PlanLimits> } = {}
+  options: { limits?: Partial<PlanLimits> } = {},
 ): RepairResult {
   const changes: RepairChange[] = [];
   if (!isObj(payload)) {
     return {
       repaired: payload,
       changes,
-      result: { valid: false, errors: [{ field: "payload", message: "payload must be a JSON object — nothing to repair" }], warnings: [] },
+      result: {
+        valid: false,
+        errors: [
+          {
+            field: "payload",
+            message: "payload must be a JSON object — nothing to repair",
+          },
+        ],
+        warnings: [],
+      },
     };
   }
   const L = { ...DEFAULT_LIMITS, ...(options.limits ?? {}) };
   const p: Record<string, unknown> = JSON.parse(JSON.stringify(payload));
 
-  const drop = (obj: Record<string, unknown>, key: string, field: string, why: string) => {
+  const drop = (
+    obj: Record<string, unknown>,
+    key: string,
+    field: string,
+    why: string,
+  ) => {
     if (obj[key] !== undefined) {
       delete obj[key];
       changes.push({ field, change: why });
@@ -2286,33 +4168,61 @@ export function repairProject(
       p.type = lower;
       changes.push({ field: "type", change: `lowercased type to "${lower}"` });
     } else {
-      drop(p, "type", "type", `removed invalid type "${p.type}" (defaults to "video")`);
+      drop(
+        p,
+        "type",
+        "type",
+        `removed invalid type "${p.type}" (defaults to "video")`,
+      );
     }
   }
   const isImage = p.type === "image";
 
   // name sanitization
   if (typeof p.name === "string" && !NAME_REGEX.test(p.name)) {
-    const cleaned = p.name.replace(/[^a-zA-Z0-9_\- ]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_NAME_LEN);
+    const cleaned = p.name
+      .replace(/[^a-zA-Z0-9_\- ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, MAX_NAME_LEN);
     if (cleaned) {
       p.name = cleaned;
-      changes.push({ field: "name", change: "removed characters not allowed in name (letters, digits, spaces, _ and - only)" });
+      changes.push({
+        field: "name",
+        change:
+          "removed characters not allowed in name (letters, digits, spaces, _ and - only)",
+      });
     } else {
       drop(p, "name", "name", "removed unusable name");
     }
   }
 
   // background color
-  if (typeof p.backgroundColor === "string" && !HEX_COLOR.test(p.backgroundColor)) {
-    const hex = p.backgroundColor.startsWith("#") ? p.backgroundColor : `#${p.backgroundColor}`;
+  if (
+    typeof p.backgroundColor === "string" &&
+    !HEX_COLOR.test(p.backgroundColor)
+  ) {
+    const hex = p.backgroundColor.startsWith("#")
+      ? p.backgroundColor
+      : `#${p.backgroundColor}`;
     if (HEX_COLOR.test(hex)) {
       p.backgroundColor = hex;
-      changes.push({ field: "backgroundColor", change: `normalized color to "${hex}"` });
+      changes.push({
+        field: "backgroundColor",
+        change: `normalized color to "${hex}"`,
+      });
     }
   }
 
   // clamp numeric ranges
-  const clampField = (obj: Record<string, unknown>, key: string, field: string, min: number, max: number, integer = false) => {
+  const clampField = (
+    obj: Record<string, unknown>,
+    key: string,
+    field: string,
+    min: number,
+    max: number,
+    integer = false,
+  ) => {
     const v = obj[key];
     if (isNum(v) && (v < min || v > max || (integer && !Number.isInteger(v)))) {
       let nv = clamp(v, min, max);
@@ -2329,17 +4239,35 @@ export function repairProject(
     for (const k of IMAGE_FORBIDDEN_TOP) {
       drop(p, k, k, `removed "${k}" — not applicable to image renders`);
     }
-    if (typeof p.outputFormat === "string" && !(IMAGE_OUTPUT_FORMATS as readonly string[]).includes(p.outputFormat)) {
+    if (
+      typeof p.outputFormat === "string" &&
+      !(IMAGE_OUTPUT_FORMATS as readonly string[]).includes(p.outputFormat)
+    ) {
       p.outputFormat = "png";
-      changes.push({ field: "outputFormat", change: 'set outputFormat to "png" (image renders support png/jpg/jpeg/webp)' });
+      changes.push({
+        field: "outputFormat",
+        change:
+          'set outputFormat to "png" (image renders support png/jpg/jpeg/webp)',
+      });
     }
     const fmt = String(p.outputFormat ?? "png").toLowerCase();
     if (p.transparent === true && (fmt === "jpg" || fmt === "jpeg")) {
       p.outputFormat = "png";
-      changes.push({ field: "outputFormat", change: "switched jpg to png because transparent: true was requested" });
+      changes.push({
+        field: "outputFormat",
+        change: "switched jpg to png because transparent: true was requested",
+      });
     }
-    if (p.quality !== undefined && String(p.outputFormat ?? "png").toLowerCase() === "png") {
-      drop(p, "quality", "quality", "removed quality (only valid for jpg/webp)");
+    if (
+      p.quality !== undefined &&
+      String(p.outputFormat ?? "png").toLowerCase() === "png"
+    ) {
+      drop(
+        p,
+        "quality",
+        "quality",
+        "removed quality (only valid for jpg/webp)",
+      );
     }
   } else {
     for (const k of ["snapshotTime", "quality", "transparent"]) {
@@ -2347,14 +4275,25 @@ export function repairProject(
     }
     clampField(p, "duration", "duration", 0.1, L.maxDuration);
     clampField(p, "frameRate", "frameRate", 1, 60, true);
-    if (typeof p.outputFormat === "string" && !(VIDEO_OUTPUT_FORMATS as readonly string[]).includes(p.outputFormat)) {
+    if (
+      typeof p.outputFormat === "string" &&
+      !(VIDEO_OUTPUT_FORMATS as readonly string[]).includes(p.outputFormat)
+    ) {
       p.outputFormat = "mp4";
-      changes.push({ field: "outputFormat", change: 'set outputFormat to "mp4" (video renders support mp4/mov/avi/webm)' });
+      changes.push({
+        field: "outputFormat",
+        change:
+          'set outputFormat to "mp4" (video renders support mp4/mov/avi/webm)',
+      });
     }
   }
 
   // visuals
-  const repairVisualArray = (arr: unknown[], prefix: string, imageMode: boolean): unknown[] => {
+  const repairVisualArray = (
+    arr: unknown[],
+    prefix: string,
+    imageMode: boolean,
+  ): unknown[] => {
     const out: unknown[] = [];
     arr.forEach((v, i) => {
       const field = `${prefix}[${i}]`;
@@ -2364,48 +4303,81 @@ export function repairProject(
       }
       const t = normalizeType(v);
       if (!t) {
-        changes.push({ field, change: `removed visual with unsupported type "${String(v.type)}"` });
+        changes.push({
+          field,
+          change: `removed visual with unsupported type "${String(v.type)}"`,
+        });
         return;
       }
       if (imageMode && (t === "VIDEO" || t === "GIF")) {
-        changes.push({ field, change: `removed ${t} element — not allowed in image projects` });
+        changes.push({
+          field,
+          change: `removed ${t} element — not allowed in image projects`,
+        });
         return;
       }
-      if ((t === "IMAGE" || t === "GIF" || t === "VIDEO") && typeof v.src !== "string") {
-        changes.push({ field, change: `removed ${t} element without a src URL (cannot invent media)` });
+      if (
+        (t === "IMAGE" || t === "GIF" || t === "VIDEO") &&
+        typeof v.src !== "string"
+      ) {
+        changes.push({
+          field,
+          change: `removed ${t} element without a src URL (cannot invent media)`,
+        });
         return;
       }
       if (t === "SVG" && typeof v.svg !== "string") {
-        changes.push({ field, change: "removed SVG element without svg markup" });
+        changes.push({
+          field,
+          change: "removed SVG element without svg markup",
+        });
         return;
       }
       if (t === "TEXT") {
         const hasText = typeof v.text === "string" && v.text.trim().length > 0;
         const hasHtml = typeof v.html === "string" && v.html.trim().length > 0;
         if (!hasText && !hasHtml) {
-          changes.push({ field, change: "removed empty TEXT element (no text or html)" });
+          changes.push({
+            field,
+            change: "removed empty TEXT element (no text or html)",
+          });
           return;
         }
         if (typeof v.text === "string" && /[<>]/.test(v.text) && !hasHtml) {
           v.html = v.text;
           delete v.text;
-          changes.push({ field, change: "moved markup from text to html (text must be plain)" });
+          changes.push({
+            field,
+            change: "moved markup from text to html (text must be plain)",
+          });
         }
       }
       // strip unknown keys (backend would strip them anyway)
       for (const k of Object.keys(v)) {
         if (!VISUAL_KEYS[t].includes(k)) {
           delete v[k];
-          changes.push({ field: `${field}.${k}`, change: `removed unknown field "${k}"` });
+          changes.push({
+            field: `${field}.${k}`,
+            change: `removed unknown field "${k}"`,
+          });
         }
       }
       if (imageMode) {
         for (const k of IMAGE_FORBIDDEN_ITEM_FIELDS) {
-          drop(v, k, `${field}.${k}`, `removed "${k}" — timing fields are not applicable to image renders`);
+          drop(
+            v,
+            k,
+            `${field}.${k}`,
+            `removed "${k}" — timing fields are not applicable to image renders`,
+          );
         }
       }
       // swap reversed timings
-      if (isNum(v.enterBegin) && isNum(v.enterEnd) && v.enterEnd < v.enterBegin) {
+      if (
+        isNum(v.enterBegin) &&
+        isNum(v.enterEnd) &&
+        v.enterEnd < v.enterBegin
+      ) {
         [v.enterBegin, v.enterEnd] = [v.enterEnd, v.enterBegin];
         changes.push({ field, change: "swapped reversed enterBegin/enterEnd" });
       }
@@ -2432,11 +4404,18 @@ export function repairProject(
     p.scenes.forEach((s: unknown, i: number) => {
       if (!isObj(s)) return;
       if (Array.isArray(s.visuals)) {
-        s.visuals = repairVisualArray(s.visuals, `scenes[${i}].visuals`, isImage);
+        s.visuals = repairVisualArray(
+          s.visuals,
+          `scenes[${i}].visuals`,
+          isImage,
+        );
       }
       if (isNum(s.duration) && s.duration !== -1 && s.duration <= 0) {
         s.duration = -1;
-        changes.push({ field: `scenes[${i}].duration`, change: "set non-positive duration to -1 (auto)" });
+        changes.push({
+          field: `scenes[${i}].duration`,
+          change: "set non-positive duration to -1 (auto)",
+        });
       }
     });
   }
@@ -2452,7 +4431,11 @@ export function repairProject(
         [a.enter, a.exit] = [a.exit, a.enter];
         changes.push({ field, change: "swapped reversed enter/exit" });
       }
-      if (isNum(a.audioBegin) && isNum(a.audioEnd) && a.audioEnd < a.audioBegin) {
+      if (
+        isNum(a.audioBegin) &&
+        isNum(a.audioEnd) &&
+        a.audioEnd < a.audioBegin
+      ) {
         [a.audioBegin, a.audioEnd] = [a.audioEnd, a.audioBegin];
         changes.push({ field, change: "swapped reversed audioBegin/audioEnd" });
       }
@@ -2463,12 +4446,30 @@ export function repairProject(
   if (isObj(p.subtitle)) {
     const sub = p.subtitle;
     if (sub.src !== undefined && sub.captions !== undefined) {
-      drop(sub, "src", "subtitle.src", "removed src — subtitle takes exactly one of src or captions (kept captions)");
+      drop(
+        sub,
+        "src",
+        "subtitle.src",
+        "removed src — subtitle takes exactly one of src or captions (kept captions)",
+      );
     }
     if (sub.src === undefined && sub.captions === undefined) {
-      drop(p, "subtitle", "subtitle", "removed subtitle with neither src nor captions");
-    } else if (sub.styles !== undefined && SUBTITLE_V2_KEYS.some((k) => sub[k] !== undefined)) {
-      drop(sub, "styles", "subtitle.styles", "removed legacy styles block — cannot be combined with flat v2 style keys (kept v2 keys)");
+      drop(
+        p,
+        "subtitle",
+        "subtitle",
+        "removed subtitle with neither src nor captions",
+      );
+    } else if (
+      sub.styles !== undefined &&
+      SUBTITLE_V2_KEYS.some((k) => sub[k] !== undefined)
+    ) {
+      drop(
+        sub,
+        "styles",
+        "subtitle.styles",
+        "removed legacy styles block — cannot be combined with flat v2 style keys (kept v2 keys)",
+      );
     }
   }
 
@@ -2476,7 +4477,10 @@ export function repairProject(
   for (const k of Object.keys(p)) {
     if (!PROJECT_KEYS.has(k)) {
       delete p[k];
-      changes.push({ field: k, change: `removed unknown top-level field "${k}"` });
+      changes.push({
+        field: k,
+        change: `removed unknown top-level field "${k}"`,
+      });
     }
   }
 
@@ -2505,27 +4509,103 @@ export interface ElementDoc {
 }
 
 const BASE_FIELD_DOCS: ElementFieldDoc[] = [
-  { name: "position", type: `enum(${POSITION_PRESETS.length})`, description: 'Placement preset. Sets BOTH the canvas point AND the anchor, and OVERWRITES x/y (they only work with "custom"). Presets are flush with the frame edges (no margin). Two elements with the same preset render exactly stacked.' },
-  { name: "x / y", type: "number", description: 'Anchor-point coordinates in canvas px — ONLY honored when position is "custom" (may be negative). E.g. a CTA 80px above the bottom of a 720p canvas: { position: "custom", x: 640, y: 640, anchor: "center-center" }.' },
-  { name: "width / height", type: "number", description: "Element size in px (1..plan maxInputResolution)." },
-  { name: "anchor", type: "enum", description: 'Which point of the ELEMENT sits at the position point (same values as position). Defaults to the position preset; with "custom" it defaults to top-left.' },
-  { name: "resize", type: '"contain" | "cover"', description: "How media fills its box." },
-  { name: "enterBegin / enterEnd", type: "number (s)", description: "Enter animation window in seconds; enterEnd >= enterBegin." },
-  { name: "exitBegin / exitEnd", type: "number (s)", description: "Exit animation window in seconds; exitEnd >= exitBegin." },
-  { name: "enterAnimation / exitAnimation", type: "xfade enum | null", description: `One of ${XFADE_EFFECTS.length} xfade effects, e.g. "fade", "slideleft", "circleopen".` },
+  {
+    name: "position",
+    type: `enum(${POSITION_PRESETS.length})`,
+    description:
+      'Placement preset. Sets BOTH the canvas point AND the anchor, and OVERWRITES x/y (they only work with "custom"). Presets are flush with the frame edges (no margin). Two elements with the same preset render exactly stacked.',
+  },
+  {
+    name: "x / y",
+    type: "number",
+    description:
+      'Anchor-point coordinates in canvas px — ONLY honored when position is "custom" (may be negative). E.g. a CTA 80px above the bottom of a 720p canvas: { position: "custom", x: 640, y: 640, anchor: "center-center" }.',
+  },
+  {
+    name: "width / height",
+    type: "number",
+    description: "Element size in px (1..plan maxInputResolution).",
+  },
+  {
+    name: "anchor",
+    type: "enum",
+    description:
+      'Which point of the ELEMENT sits at the position point (same values as position). Defaults to the position preset; with "custom" it defaults to top-left.',
+  },
+  {
+    name: "resize",
+    type: '"contain" | "cover"',
+    description: "How media fills its box.",
+  },
+  {
+    name: "enterBegin / enterEnd",
+    type: "number (s)",
+    description: "Enter animation window in seconds; enterEnd >= enterBegin.",
+  },
+  {
+    name: "exitBegin / exitEnd",
+    type: "number (s)",
+    description: "Exit animation window in seconds; exitEnd >= exitBegin.",
+  },
+  {
+    name: "enterAnimation / exitAnimation",
+    type: "xfade enum | null",
+    description: `One of ${XFADE_EFFECTS.length} xfade effects, e.g. "fade", "slideleft", "circleopen".`,
+  },
   { name: "opacity", type: "number 0..1", description: "Element opacity." },
-  { name: "angle", type: "number -360..360", description: "Rotation in degrees." },
-  { name: "flipH / flipV", type: "boolean", description: "Mirror the element." },
-  { name: "track", type: "integer >= 0", description: "Z-order; higher tracks render on top." },
+  {
+    name: "angle",
+    type: "number -360..360",
+    description: "Rotation in degrees.",
+  },
+  {
+    name: "flipH / flipV",
+    type: "boolean",
+    description: "Mirror the element.",
+  },
+  {
+    name: "track",
+    type: "integer >= 0",
+    description: "Z-order; higher tracks render on top.",
+  },
 ];
 
 const MEDIA_FIELD_DOCS: ElementFieldDoc[] = [
-  { name: "src", type: "URL", required: true, description: "Public http(s) media URL (SSRF-checked; no private hosts, port 80/443 only)." },
-  { name: "cropParams", type: "{x,y,width,height}", description: "Crop rectangle in source pixels (all four required if present)." },
-  { name: "filter", type: "object", description: "brightness/contrast/saturate (-100..100), hue-rotate/blur (strings), invert, colorTint (#hex)." },
-  { name: "chromaKey", type: "{color!, similarity?, blend?}", description: "Green-screen keying; color is a #hex, similarity/blend 0..100." },
-  { name: "zoom", type: "boolean | {depth: 1..10}", description: "Ken Burns zoom (true = 1.2x depth)." },
-  { name: "radius", type: "{tl?,tr?,bl?,br?}", description: "Rounded corners in px." },
+  {
+    name: "src",
+    type: "URL",
+    required: true,
+    description:
+      "Public http(s) media URL (SSRF-checked; no private hosts, port 80/443 only).",
+  },
+  {
+    name: "cropParams",
+    type: "{x,y,width,height}",
+    description:
+      "Crop rectangle in source pixels (all four required if present).",
+  },
+  {
+    name: "filter",
+    type: "object",
+    description:
+      "brightness/contrast/saturate (-100..100), hue-rotate/blur (strings), invert, colorTint (#hex).",
+  },
+  {
+    name: "chromaKey",
+    type: "{color!, similarity?, blend?}",
+    description:
+      "Green-screen keying; color is a #hex, similarity/blend 0..100.",
+  },
+  {
+    name: "zoom",
+    type: "boolean | {depth: 1..10}",
+    description: "Ken Burns zoom (true = 1.2x depth).",
+  },
+  {
+    name: "radius",
+    type: "{tl?,tr?,bl?,br?}",
+    description: "Rounded corners in px.",
+  },
 ];
 
 export function getElementDocs(type: string): ElementDoc | undefined {
@@ -2534,12 +4614,13 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     IMAGE: {
       type: "IMAGE",
       kind: "visual",
-      summary: "A raster image (jpg/png/webp/...) placed on the canvas. Allowed in video AND image projects.",
+      summary:
+        "A raster image (jpg/png/webp/...) placed on the canvas. Allowed in video AND image projects.",
       requiredFields: ["type", "src"],
       fields: [...MEDIA_FIELD_DOCS, ...BASE_FIELD_DOCS],
       notes: [
         "Count is plan-limited across the whole project (project visuals + all scene visuals).",
-        "Use resize: \"cover\" + width/height to fill a region; combine with zoom for Ken Burns.",
+        'Use resize: "cover" + width/height to fill a region; combine with zoom for Ken Burns.',
       ],
       example: {
         type: "IMAGE",
@@ -2557,17 +4638,47 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     VIDEO: {
       type: "VIDEO",
       kind: "visual",
-      summary: "A video clip placed on the canvas. VIDEO projects only (forbidden in image renders).",
+      summary:
+        "A video clip placed on the canvas. VIDEO projects only (forbidden in image renders).",
       requiredFields: ["type", "src"],
       fields: [
         ...MEDIA_FIELD_DOCS,
-        { name: "videoBegin / videoEnd", type: "number (s)", description: "Trim window in SOURCE time; videoEnd >= videoBegin." },
-        { name: "videoDuration", type: "number (s)", description: "Play only this many seconds of the source." },
-        { name: "volume", type: "number 0..1", description: "Clip audio volume." },
-        { name: "speed", type: "number 0.1..10", description: "Playback speed multiplier." },
-        { name: "id / transitionId / transition / transitionDuration", type: "linking", description: "Chain clips: set transition on a clip and transitionId pointing at the next clip's id for an xfade between them." },
-        { name: "frameRate", type: "integer 1..60", description: "Override the source frame rate." },
-        { name: "hasAudio", type: "boolean", description: "Hint that the source has audio." },
+        {
+          name: "videoBegin / videoEnd",
+          type: "number (s)",
+          description: "Trim window in SOURCE time; videoEnd >= videoBegin.",
+        },
+        {
+          name: "videoDuration",
+          type: "number (s)",
+          description: "Play only this many seconds of the source.",
+        },
+        {
+          name: "volume",
+          type: "number 0..1",
+          description: "Clip audio volume.",
+        },
+        {
+          name: "speed",
+          type: "number 0.1..10",
+          description: "Playback speed multiplier.",
+        },
+        {
+          name: "id / transitionId / transition / transitionDuration",
+          type: "linking",
+          description:
+            "Chain clips: set transition on a clip and transitionId pointing at the next clip's id for an xfade between them.",
+        },
+        {
+          name: "frameRate",
+          type: "integer 1..60",
+          description: "Override the source frame rate.",
+        },
+        {
+          name: "hasAudio",
+          type: "boolean",
+          description: "Hint that the source has audio.",
+        },
         ...BASE_FIELD_DOCS,
       ],
       notes: [
@@ -2591,7 +4702,10 @@ export function getElementDocs(type: string): ElementDoc | undefined {
       summary: "An animated GIF placed on the canvas. VIDEO projects only.",
       requiredFields: ["type", "src"],
       fields: [...MEDIA_FIELD_DOCS, ...BASE_FIELD_DOCS],
-      notes: ["Count is plan-limited.", "GIFs loop for the duration they are visible."],
+      notes: [
+        "Count is plan-limited.",
+        "GIFs loop for the duration they are visible.",
+      ],
       example: {
         type: "GIF",
         src: "https://media.example.com/sticker.gif",
@@ -2605,17 +4719,36 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     SVG: {
       type: "SVG",
       kind: "visual",
-      summary: "Inline SVG markup drawn on the canvas (shapes, badges, decorations). Allowed in video AND image projects.",
+      summary:
+        "Inline SVG markup drawn on the canvas (shapes, badges, decorations). Allowed in video AND image projects.",
       requiredFields: ["type", "svg"],
       fields: [
-        { name: "svg", type: "string", required: true, description: `Inline markup starting with <svg>, max ${MAX_SVG_CHARS} chars. Sanitized: no scripts/foreignObject/event handlers/external refs; dims <= ${MAX_SVG_DIMENSION}px; no 8+ digit integers.` },
-        { name: "filter / chromaKey", type: "object", description: "Same as IMAGE." },
-        { name: "customCode", type: "{css?, js?, animationDuration?}", description: "Sandboxed animation code (no network/storage/navigation; max 15s)." },
-        { name: "designer", type: "object", description: "Opaque Design Studio round-trip metadata." },
+        {
+          name: "svg",
+          type: "string",
+          required: true,
+          description: `Inline markup starting with <svg>, max ${MAX_SVG_CHARS} chars. Sanitized: no scripts/foreignObject/event handlers/external refs; dims <= ${MAX_SVG_DIMENSION}px; no 8+ digit integers.`,
+        },
+        {
+          name: "filter / chromaKey",
+          type: "object",
+          description: "Same as IMAGE.",
+        },
+        {
+          name: "customCode",
+          type: "{css?, js?, animationDuration?}",
+          description:
+            "Sandboxed animation code (no network/storage/navigation; max 15s).",
+        },
+        {
+          name: "designer",
+          type: "object",
+          description: "Opaque Design Studio round-trip metadata.",
+        },
         ...BASE_FIELD_DOCS,
       ],
       notes: [
-        'Only geometry elements are allowed inside: g, defs, linearGradient, radialGradient, stop, path, circle, ellipse, rect, polygon, polyline, line.',
+        "Only geometry elements are allowed inside: g, defs, linearGradient, radialGradient, stop, path, circle, ellipse, rect, polygon, polyline, line.",
         "Paint attributes accept keywords/#hex/rgb()/hsl() or url(#localGradientId) — never external URLs.",
         "PREFER HTML for rectangles/pills/cards/badges with text: build ONE TEXT element whose style carries backgroundColor/borderRadius and whose html carries the label — an SVG box plus a separately-positioned TEXT on top misaligns and overflows. Use SVG only for genuine vector artwork (logos, icons, organic shapes).",
       ],
@@ -2630,23 +4763,44 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     TEXT: {
       type: "TEXT",
       kind: "visual",
-      summary: "Styled text. Needs non-empty `text` (plain) and/or `html` (limited markup). Allowed in video AND image projects.",
+      summary:
+        "Styled text. Needs non-empty `text` (plain) and/or `html` (limited markup). Allowed in video AND image projects.",
       requiredFields: ["type", "text (or html)"],
       fields: [
-        { name: "text", type: "string", description: `Plain text, max ${MAX_TEXT_LEN} chars. MUST NOT contain < or > — use html for markup.` },
-        { name: "html", type: "string", description: `Limited HTML, max ${MAX_HTML_LEN} chars. Allowed tags: b, strong, i, em, u, s, br, span, div, p, ul, ol, li, img, canvas, svg. Allowed attrs: style, class, src, alt, width, height. No <script>/<style>/events.` },
-        { name: "style", type: "object", description: `CSS object (max ${MAX_STYLE_PROPS} props): {"fontSize": "64px", "color": "#ffffff", "fontWeight": 700, "fontFamily": "Inter"}. url()/@import/expression()/CSS comments are rejected.` },
-        { name: "customCode", type: "{css?, js?, animationDuration?}", description: "Sandboxed Design Studio animation code." },
-        { name: "designer", type: "object", description: "Opaque Design Studio metadata." },
+        {
+          name: "text",
+          type: "string",
+          description: `Plain text, max ${MAX_TEXT_LEN} chars. MUST NOT contain < or > — use html for markup.`,
+        },
+        {
+          name: "html",
+          type: "string",
+          description: `Limited HTML, max ${MAX_HTML_LEN} chars. Allowed tags: b, strong, i, em, u, s, br, span, div, p, ul, ol, li, img, canvas, svg. Allowed attrs: style, class, src, alt, width, height. No <script>/<style>/events.`,
+        },
+        {
+          name: "style",
+          type: "object",
+          description: `CSS object (max ${MAX_STYLE_PROPS} props): {"fontSize": "64px", "color": "#ffffff", "fontWeight": 700, "fontFamily": "Inter"}. url()/@import/expression()/CSS comments are rejected.`,
+        },
+        {
+          name: "customCode",
+          type: "{css?, js?, animationDuration?}",
+          description: "Sandboxed Design Studio animation code.",
+        },
+        {
+          name: "designer",
+          type: "object",
+          description: "Opaque Design Studio metadata.",
+        },
         ...BASE_FIELD_DOCS,
       ],
       notes: [
         "Font sizing/styling lives in `style` (CSS-like), not top-level fields — top-level fontSize/color are IGNORED.",
-        "Style values must not contain url() or @import (fonts load from Google Fonts via fontFamily; default \"Poppins\").",
-        "LAYOUT: text renders at the TOP of its box — add display: \"flex\", alignItems: \"center\", justifyContent: \"center\" to center it. Padding renders OUTSIDE width/height (content-box) and gets cut off: size cards via width/height + flex centering, never via padding.",
+        'Style values must not contain url() or @import (fonts load from Google Fonts via fontFamily; default "Poppins").',
+        'LAYOUT: text renders at the TOP of its box — add display: "flex", alignItems: "center", justifyContent: "center" to center it. Padding renders OUTSIDE width/height (content-box) and gets cut off: size cards via width/height + flex centering, never via padding.',
         "Put a headline + subline INSIDE one element via `html` (two <p> tags with inline styles) instead of two positioned elements — they can never overlap or drift apart.",
         "Cards/pills/buttons: ONE TEXT element with backgroundColor/borderRadius on `style` and the label inside — not an SVG/IMAGE box plus a separate TEXT on top.",
-        "Contrast: keep text ≥ 4.5:1 against what's behind it; over photos/video add a scrim layer (full-canvas TEXT, html \"<div></div>\", style backgroundColor rgba(2,6,23,0.55)) beneath the text.",
+        'Contrast: keep text ≥ 4.5:1 against what\'s behind it; over photos/video add a scrim layer (full-canvas TEXT, html "<div></div>", style backgroundColor rgba(2,6,23,0.55)) beneath the text.',
       ],
       example: {
         type: "TEXT",
@@ -2671,15 +4825,42 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     AUDIO: {
       type: "AUDIO",
       kind: "audio",
-      summary: "A soundtrack / voice-over entry in the `audios` array (project- or scene-level). VIDEO projects only.",
-      requiredFields: ["src (practically — an entry without src plays nothing)"],
+      summary:
+        "A soundtrack / voice-over entry in the `audios` array (project- or scene-level). VIDEO projects only.",
+      requiredFields: [
+        "src (practically — an entry without src plays nothing)",
+      ],
       fields: [
-        { name: "src", type: "URL", description: "Public http(s) audio URL (mp3/wav/...)." },
-        { name: "enter / exit", type: "number (s)", description: "Timeline window when the audio plays; exit >= enter." },
-        { name: "volume", type: "number 0..1", description: "Playback volume." },
-        { name: "speed", type: "number 0.1..10", description: "Playback speed." },
-        { name: "audioBegin / audioEnd", type: "number (s)", description: "Trim window in SOURCE time; audioEnd >= audioBegin." },
-        { name: "audioDuration", type: "number (s)", description: "Play only this many seconds of the source." },
+        {
+          name: "src",
+          type: "URL",
+          description: "Public http(s) audio URL (mp3/wav/...).",
+        },
+        {
+          name: "enter / exit",
+          type: "number (s)",
+          description: "Timeline window when the audio plays; exit >= enter.",
+        },
+        {
+          name: "volume",
+          type: "number 0..1",
+          description: "Playback volume.",
+        },
+        {
+          name: "speed",
+          type: "number 0.1..10",
+          description: "Playback speed.",
+        },
+        {
+          name: "audioBegin / audioEnd",
+          type: "number (s)",
+          description: "Trim window in SOURCE time; audioEnd >= audioBegin.",
+        },
+        {
+          name: "audioDuration",
+          type: "number (s)",
+          description: "Play only this many seconds of the source.",
+        },
       ],
       notes: [
         "Lives in `audios: [...]`, not `visuals`.",
@@ -2695,21 +4876,71 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     SUBTITLE: {
       type: "SUBTITLE",
       kind: "subtitle",
-      summary: "Burned-in captions via the top-level `subtitle` object. VIDEO projects only. Content: exactly one of `src` (SRT/VTT URL) or `captions`.",
+      summary:
+        "Burned-in captions via the top-level `subtitle` object. VIDEO projects only. Content: exactly one of `src` (SRT/VTT URL) or `captions`.",
       requiredFields: ["src XOR captions"],
       fields: [
         { name: "src", type: "URL", description: "SRT or VTT file URL." },
-        { name: "captions", type: "array", description: '[{start, end, text?, words?}] — seconds; words: [{start, end, text}] for word-accurate timing (auto-distributed from text when omitted).' },
-        { name: "animation", type: `enum(${SUBTITLE_ANIMATIONS.length})`, description: SUBTITLE_ANIMATIONS.join(", ") },
-        { name: "font", type: "object", description: "{family, size (1..1000), color (#rrggbb[aa]), bold, italic, transform}." },
-        { name: "stroke", type: "{color!, width!}", description: "Text outline; width 0..100." },
-        { name: "background", type: "object", description: "{color, opacity 0..1, padding 0..200, radius 0..200} caption box." },
-        { name: "activeWord", type: "object", description: "{color, background, radius} for the currently spoken word (karaoke/highlight modes)." },
-        { name: "position", type: "enum", description: SUBTITLE_POSITIONS_V2.join(", ") },
-        { name: "margin", type: "{x?, y?}", description: "Pixel margins from the frame edge." },
-        { name: "maxWordsPerLine", type: "integer 1..20", description: "Re-chunk captions to at most N words per line." },
-        { name: "direction", type: "up|down|left|right", description: 'Slide direction for animation: "slide".' },
-        { name: "styles", type: "object (LEGACY)", description: "Old style block — cannot be combined with the flat keys above." },
+        {
+          name: "captions",
+          type: "array",
+          description:
+            "[{start, end, text?, words?}] — seconds; words: [{start, end, text}] for word-accurate timing (auto-distributed from text when omitted).",
+        },
+        {
+          name: "animation",
+          type: `enum(${SUBTITLE_ANIMATIONS.length})`,
+          description: SUBTITLE_ANIMATIONS.join(", "),
+        },
+        {
+          name: "font",
+          type: "object",
+          description:
+            "{family, size (1..1000), color (#rrggbb[aa]), bold, italic, transform}.",
+        },
+        {
+          name: "stroke",
+          type: "{color!, width!}",
+          description: "Text outline; width 0..100.",
+        },
+        {
+          name: "background",
+          type: "object",
+          description:
+            "{color, opacity 0..1, padding 0..200, radius 0..200} caption box.",
+        },
+        {
+          name: "activeWord",
+          type: "object",
+          description:
+            "{color, background, radius} for the currently spoken word (karaoke/highlight modes).",
+        },
+        {
+          name: "position",
+          type: "enum",
+          description: SUBTITLE_POSITIONS_V2.join(", "),
+        },
+        {
+          name: "margin",
+          type: "{x?, y?}",
+          description: "Pixel margins from the frame edge.",
+        },
+        {
+          name: "maxWordsPerLine",
+          type: "integer 1..20",
+          description: "Re-chunk captions to at most N words per line.",
+        },
+        {
+          name: "direction",
+          type: "up|down|left|right",
+          description: 'Slide direction for animation: "slide".',
+        },
+        {
+          name: "styles",
+          type: "object (LEGACY)",
+          description:
+            "Old style block — cannot be combined with the flat keys above.",
+        },
       ],
       notes: [
         "Caption count is plan-limited.",
@@ -2730,17 +4961,55 @@ export function getElementDocs(type: string): ElementDoc | undefined {
     SCENE: {
       type: "SCENE",
       kind: "scene",
-      summary: "A timeline segment in `scenes`. Scenes play sequentially; each carries its own visuals/audios and an optional transition into the NEXT scene.",
+      summary:
+        "A timeline segment in `scenes`. Scenes play sequentially; each carries its own visuals/audios and an optional transition into the NEXT scene.",
       requiredFields: [],
       fields: [
-        { name: "id", type: "string", description: "Scene id (letters/digits/_/-), referenced by transitionId." },
-        { name: "duration", type: "number (s) | -1", description: "-1 (or omitted) auto-computes from content; else 0.1..plan maxDuration." },
-        { name: "transition", type: "xfade enum | null", description: "Blend into the next scene." },
-        { name: "transitionDuration", type: "number 0..60", description: "Overlap seconds (default 0.5). Subtracted from the total duration." },
-        { name: "transitionId", type: "string | null", description: "Normally omit; the transition applies to the next scene when omitted/null/'none'/equal to its id." },
-        { name: "backgroundColor", type: "#hex", description: "Scene background." },
-        { name: "visuals", type: "array", description: "Elements visible during this scene (timing fields are scene-relative)." },
-        { name: "audios", type: "array", description: "Audio entries scoped to this scene." },
+        {
+          name: "id",
+          type: "string",
+          description:
+            "Scene id (letters/digits/_/-), referenced by transitionId.",
+        },
+        {
+          name: "duration",
+          type: "number (s) | -1",
+          description:
+            "-1 (or omitted) auto-computes from content; else 0.1..plan maxDuration.",
+        },
+        {
+          name: "transition",
+          type: "xfade enum | null",
+          description: "Blend into the next scene.",
+        },
+        {
+          name: "transitionDuration",
+          type: "number 0..60",
+          description:
+            "Overlap seconds (default 0.5). Subtracted from the total duration.",
+        },
+        {
+          name: "transitionId",
+          type: "string | null",
+          description:
+            "Normally omit; the transition applies to the next scene when omitted/null/'none'/equal to its id.",
+        },
+        {
+          name: "backgroundColor",
+          type: "#hex",
+          description: "Scene background.",
+        },
+        {
+          name: "visuals",
+          type: "array",
+          description:
+            "Elements visible during this scene (timing fields are scene-relative).",
+        },
+        {
+          name: "audios",
+          type: "array",
+          description: "Audio entries scoped to this scene.",
+        },
       ],
       notes: [
         "Scene count is plan-limited.",
@@ -2753,7 +5022,12 @@ export function getElementDocs(type: string): ElementDoc | undefined {
         transitionDuration: 0.5,
         backgroundColor: "#0b0b12",
         visuals: [
-          { type: "TEXT", text: "Scene one", position: "center-center", style: { fontSize: "64px", color: "#ffffff" } },
+          {
+            type: "TEXT",
+            text: "Scene one",
+            position: "center-center",
+            style: { fontSize: "64px", color: "#ffffff" },
+          },
         ],
       },
     },
@@ -2761,10 +5035,29 @@ export function getElementDocs(type: string): ElementDoc | undefined {
   return docs[t];
 }
 
-export function listElements(): Array<{ type: string; kind: string; summary: string; requiredFields: string[] }> {
-  return ["IMAGE", "VIDEO", "GIF", "SVG", "TEXT", "AUDIO", "SUBTITLE", "SCENE"].map((t) => {
+export function listElements(): Array<{
+  type: string;
+  kind: string;
+  summary: string;
+  requiredFields: string[];
+}> {
+  return [
+    "IMAGE",
+    "VIDEO",
+    "GIF",
+    "SVG",
+    "TEXT",
+    "AUDIO",
+    "SUBTITLE",
+    "SCENE",
+  ].map((t) => {
     const d = getElementDocs(t)!;
-    return { type: d.type, kind: d.kind, summary: d.summary, requiredFields: d.requiredFields };
+    return {
+      type: d.type,
+      kind: d.kind,
+      summary: d.summary,
+      requiredFields: d.requiredFields,
+    };
   });
 }
 
@@ -2934,7 +5227,12 @@ export const EXAMPLES: Example[] = [
         },
       ],
       audios: [
-        { src: "https://cdn.example.com/music/upbeat.mp3", enter: 0, exit: 10, volume: 0.35 },
+        {
+          src: "https://cdn.example.com/music/upbeat.mp3",
+          enter: 0,
+          exit: 10,
+          volume: 0.35,
+        },
       ],
     },
   },
@@ -2945,7 +5243,11 @@ export const EXAMPLES: Example[] = [
       "Render request that references a stored template and fills its {{placeholders}}. Use preview_template / POST /api/templates/:id/preview first for a free dry run.",
     request: {
       template: "tpl_Ab12Cd34Ef56Gh78Ij90",
-      variables: { headline: "Summer sale", cta: "Shop now", brandColor: "#7c3aed" },
+      variables: {
+        headline: "Summer sale",
+        cta: "Shop now",
+        brandColor: "#7c3aed",
+      },
       overrides: { name: "summer-sale-v1" },
     },
   },
@@ -3042,7 +5344,7 @@ export const EXAMPLES: Example[] = [
     name: "webhook-flow",
     title: "Render with webhook notification",
     description:
-      "Fire-and-forget render: attach a per-job webhookUrl and receive render.completed / render.failed (HMAC-SHA256 signed: X-Zvid-Signature over \"<X-Zvid-Timestamp>.<raw body>\") instead of polling.",
+      'Fire-and-forget render: attach a per-job webhookUrl and receive render.completed / render.failed (HMAC-SHA256 signed: X-Zvid-Signature over "<X-Zvid-Timestamp>.<raw body>") instead of polling.',
     request: {
       payload: {
         type: "video",
