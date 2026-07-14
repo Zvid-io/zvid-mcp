@@ -1,54 +1,75 @@
+<p align="center">
+  <img src="https://cdn.zvid.io/assets/logo.svg" alt="Zvid" width="184" />
+</p>
+
 # zvid-mcp
 
 Official [Zvid](https://zvid.io) MCP server. Gives any MCP client (Claude Code, Claude Desktop, Codex CLI, Cursor, …) tools to render videos and images from JSON, manage templates, projects and webhooks, and check credits — all through the Zvid REST API.
 
 ## Requirements
 
-- Node.js ≥ 18
-- A Zvid API key (`zvid_…`) — create one in the Zvid dashboard under **Settings → API Keys**
+- Hosted OAuth: a Zvid account and any OAuth-capable Streamable HTTP MCP client
+- Local stdio: Node.js ≥ 18 and a Zvid API key
 
-## Configuration
+## Hosted setup (recommended)
 
-| Env var | CLI flag | Required | Default | Purpose |
-| --- | --- | --- | --- | --- |
-| `ZVID_API_KEY` | `--api-key zvid_…` | yes | — | Your Zvid API key |
-| `ZVID_API_URL` | `--api-url http://…` | no | `https://api.zvid.io` | Orchestrator base URL (set for self-hosted / local dev) |
+The hosted endpoint is `https://mcp.zvid.io/mcp`. It publishes OAuth discovery
+metadata, uses authorization code + PKCE, and issues short-lived access tokens
+with rotating refresh tokens. Users sign in to Zvid; they do not create or
+paste API keys.
 
-CLI flags win over env vars. Use them when your MCP host has no way to set environment variables on a server entry — the whole configuration then fits in the command line:
+### Claude Code
+
+```bash
+claude mcp add --transport http zvid https://mcp.zvid.io/mcp
+claude mcp login zvid
+```
+
+You can also open `/mcp` inside Claude Code and authenticate there.
+
+### OpenAI Codex
+
+Add this to `~/.codex/config.toml`, then authenticate from MCP settings or run
+`codex mcp login zvid`:
+
+```toml
+[mcp_servers.zvid]
+url = "https://mcp.zvid.io/mcp"
+auth = "oauth"
+scopes = ["zvid:mcp"]
+oauth_resource = "https://mcp.zvid.io/mcp"
+```
+
+## Local stdio / self-hosted setup
+
+The npm/stdio entry point remains API-key based because OAuth is defined for
+HTTP transports. Configuration resolution is CLI flags, then environment, then
+`~/.zvid-mcp.json`:
 
 ```bash
 npx -y zvid-mcp --api-key zvid_your_key_here --api-url http://localhost:4000
 ```
 
-> Testing against a local orchestrator? The default API URL is **production** (`https://api.zvid.io`) — a key created on your local instance only exists there, so you must also pass `--api-url http://localhost:4000` (or set `ZVID_API_URL`), otherwise every call fails with 401 "Invalid API key".
+| Env var | CLI flag | Required | Default | Purpose |
+| --- | --- | --- | --- | --- |
+| `ZVID_API_KEY` | `--api-key zvid_…` | stdio only | — | Zvid API key |
+| `ZVID_API_URL` | `--api-url http://…` | no | `https://api.zvid.io` | Orchestrator base URL |
 
-## Setup
+For a self-hosted OAuth deployment, keep the resource and issuer identical on
+both services:
 
-### Claude Code
+| Service | Variable | Production default |
+| --- | --- | --- |
+| Orchestrator | `OAUTH_ISSUER` | `https://api.zvid.io` |
+| Orchestrator | `OAUTH_MCP_RESOURCE` | `https://mcp.zvid.io/mcp` |
+| Orchestrator | `OAUTH_CONSENT_URL` | `https://app.zvid.io/oauth/authorize` |
+| MCP | `ZVID_MCP_RESOURCE` | `https://mcp.zvid.io/mcp` |
+| MCP | `ZVID_OAUTH_ISSUER` | `https://api.zvid.io` |
 
-```bash
-claude mcp add zvid --env ZVID_API_KEY=zvid_your_key_here -- npx -y zvid-mcp
-```
+The orchestrator also accepts `OAUTH_ACCESS_TOKEN_TTL_SECONDS` and
+`OAUTH_REFRESH_TOKEN_TTL_SECONDS`; their defaults are one hour and 30 days.
 
-### Claude Desktop
-
-Add to `claude_desktop_config.json` (**Settings → Developer → Edit Config**):
-
-```json
-{
-  "mcpServers": {
-    "zvid": {
-      "command": "npx",
-      "args": ["-y", "zvid-mcp"],
-      "env": {
-        "ZVID_API_KEY": "zvid_your_key_here"
-      }
-    }
-  }
-}
-```
-
-### From a checkout (not yet published to npm)
+From a checkout:
 
 ```bash
 cd mcp && npm install && npm run build

@@ -1,17 +1,14 @@
 /**
  * Minimal typed HTTP client for the Zvid orchestrator REST API.
  *
- * Auth: every request carries the user's API key in the `X-Api-Key` header
- * (format `zvid_<64 hex chars>`). Create keys in the Zvid dashboard.
- *
- * TODO: superseded by the official SDK in ../../sdk-typescript (package
- * `zvid-sdk`) — same fetch surface plus typed resources, waitForRender and
- * webhook signature verification. Once zvid-sdk is published to npm, replace
- * this file with `import { ZvidClient } from "zvid-sdk"`.
+ * Auth: requests carry either a legacy API key in `X-Api-Key` or an OAuth
+ * access token in `Authorization: Bearer`. Hosted MCP clients use OAuth; the
+ * API-key path remains for stdio and self-hosted integrations.
  */
 
 export interface ZvidClientOptions {
-  apiKey: string;
+  apiKey?: string;
+  accessToken?: string;
   /** Base URL of the orchestrator, default https://api.zvid.io */
   baseUrl?: string;
   fetchImpl?: typeof fetch;
@@ -37,17 +34,17 @@ export class ZvidApiError extends Error {
 export const DEFAULT_BASE_URL = "https://api.zvid.io";
 
 export class ZvidClient {
-  private readonly apiKey: string;
+  private readonly apiKey?: string;
+  private readonly accessToken?: string;
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
 
   constructor(opts: ZvidClientOptions) {
-    if (!opts.apiKey) {
-      throw new Error(
-        "Missing Zvid API key. Set the ZVID_API_KEY environment variable (create a key in the Zvid dashboard under Settings → API Keys)."
-      );
+    if ((!opts.apiKey && !opts.accessToken) || (opts.apiKey && opts.accessToken)) {
+      throw new Error("Provide exactly one Zvid credential: apiKey or accessToken.");
     }
     this.apiKey = opts.apiKey;
+    this.accessToken = opts.accessToken;
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
@@ -57,15 +54,24 @@ export class ZvidClient {
     path: string,
     opts: RequestOptions = {}
   ): Promise<T> {
-    const url = new URL(this.baseUrl + path);
-    for (const [k, v] of Object.entries(opts.query ?? {})) {
-      if (v !== undefined) url.searchParams.set(k, String(v));
+    // API-key render/authoring aliases use a /api-key suffix. OAuth follows
+    // the user-authenticated routes, which share the same handlers but do not
+    // require an api_key_id.
+    const effectivePath = this.accessToken
+      ? path.replace(/\/api-key(?=\/|$)/g, "")
+      : path;
+    const url = new URL(this.baseUrl + effectivePath);
+    for (const [key, value] of Object.entries(opts.query ?? {})) {
+      if (value !== undefined) url.searchParams.set(key, String(value));
     }
 
     const res = await this.fetchImpl(url, {
       method,
       headers: {
-        "X-Api-Key": this.apiKey,
+        ...(this.apiKey ? { "X-Api-Key": this.apiKey } : {}),
+        ...(this.accessToken
+          ? { Authorization: `Bearer ${this.accessToken}` }
+          : {}),
         "Content-Type": "application/json",
         "User-Agent": "zvid-mcp",
       },

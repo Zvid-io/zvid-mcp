@@ -69,6 +69,25 @@ test("normalizes API error responses into ZvidApiError", async () => {
   );
 });
 
-test("requires an API key", () => {
-  assert.throws(() => new ZvidClient({ apiKey: "" }), /ZVID_API_KEY/);
+test("requires exactly one credential", () => {
+  assert.throws(() => new ZvidClient({}), /exactly one Zvid credential/);
+  assert.throws(
+    () => new ZvidClient({ apiKey: "zvid_test", accessToken: "zvo_at_test" }),
+    /exactly one Zvid credential/
+  );
+});
+
+test("sends OAuth bearer tokens through user-authenticated API routes", async () => {
+  const { impl, calls } = fakeFetch(200, { valid: true });
+  const client = new ZvidClient({
+    accessToken: "zvo_at_test",
+    baseUrl: "http://localhost:4000",
+    fetchImpl: impl,
+  });
+
+  await client.post("/api/render/validate/api-key", { payload: {} });
+  assert.equal(calls[0].url, "http://localhost:4000/api/render/validate");
+  const headers = calls[0].init.headers as Record<string, string>;
+  assert.equal(headers.Authorization, "Bearer zvo_at_test");
+  assert.equal(headers["X-Api-Key"], undefined);
 });

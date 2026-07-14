@@ -21,6 +21,6 @@ COPY --from=build /app/dist ./dist
 EXPOSE 8080
 USER node
 
-# Auth is per-request (Authorization: Bearer zvid_...); ZVID_API_KEY is only a
-# single-tenant fallback and must NOT be set on the public hosted deployment.
+# Auth is per-request. Hosted clients use OAuth bearer tokens; legacy callers
+# may send zvid_... API keys. Never set a server-wide ZVID_API_KEY publicly.
 CMD ["node", "dist/http.js"]
