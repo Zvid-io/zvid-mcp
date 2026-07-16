@@ -49,35 +49,31 @@ export class ZvidClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
-  async request<T = unknown>(
-    method: string,
-    path: string,
-    opts: RequestOptions = {}
-  ): Promise<T> {
-    // API-key render/authoring aliases use a /api-key suffix. OAuth follows
-    // the user-authenticated routes, which share the same handlers but do not
-    // require an api_key_id.
-    const effectivePath = this.accessToken
+  /**
+   * API-key render/authoring aliases use a /api-key suffix. OAuth follows
+   * the user-authenticated routes, which share the same handlers but do not
+   * require an api_key_id. Only /api/render paths carry such aliases —
+   * scoping the rewrite there keeps arbitrary path segments (e.g. a library
+   * slug literally named "api-key") intact.
+   */
+  private effectivePath(path: string): string {
+    return this.accessToken && path.startsWith("/api/render")
       ? path.replace(/\/api-key(?=\/|$)/g, "")
       : path;
-    const url = new URL(this.baseUrl + effectivePath);
-    for (const [key, value] of Object.entries(opts.query ?? {})) {
-      if (value !== undefined) url.searchParams.set(key, String(value));
-    }
+  }
 
-    const res = await this.fetchImpl(url, {
-      method,
-      headers: {
-        ...(this.apiKey ? { "X-Api-Key": this.apiKey } : {}),
-        ...(this.accessToken
-          ? { Authorization: `Bearer ${this.accessToken}` }
-          : {}),
-        "Content-Type": "application/json",
-        "User-Agent": "zvid-mcp",
-      },
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
-    });
+  private authHeaders(): Record<string, string> {
+    return {
+      ...(this.apiKey ? { "X-Api-Key": this.apiKey } : {}),
+      ...(this.accessToken
+        ? { Authorization: `Bearer ${this.accessToken}` }
+        : {}),
+      "Content-Type": "application/json",
+      "User-Agent": "zvid-mcp",
+    };
+  }
 
+  private async parseResponse<T>(res: Response): Promise<T> {
     const text = await res.text();
     let json: unknown;
     try {
@@ -96,6 +92,99 @@ export class ZvidClient {
       );
     }
     return json as T;
+  }
+
+  async request<T = unknown>(
+    method: string,
+    path: string,
+    opts: RequestOptions = {}
+  ): Promise<T> {
+    const url = new URL(this.baseUrl + this.effectivePath(path));
+    for (const [key, value] of Object.entries(opts.query ?? {})) {
+      if (value !== undefined) url.searchParams.set(key, String(value));
+    }
+
+    const res = await this.fetchImpl(url, {
+      method,
+      headers: this.authHeaders(),
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    });
+    return this.parseResponse<T>(res);
+  }
+
+  /**
+   * GET a JSON document that the API may answer with a redirect to a public
+   * CDN (e.g. /api/library/:kind/:slug/content → 302 cdn.zvid.io). The
+   * redirect is followed manually WITHOUT auth headers so the account
+   * credential never reaches the CDN host — fetch's automatic redirect
+   * forwards X-Api-Key cross-origin.
+   */
+  async getRedirectedJson<T = unknown>(path: string): Promise<T> {
+    const url = new URL(this.baseUrl + this.effectivePath(path));
+    const res = await this.fetchImpl(url, {
+      method: "GET",
+      headers: this.authHeaders(),
+      redirect: "manual",
+    });
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) {
+        throw new ZvidApiError(
+          res.status,
+          `HTTP ${res.status}`,
+          "Redirect response was missing a Location header"
+        );
+      }
+      // CDN connects are occasionally flaky — retry transient network
+      // failures (not HTTP errors) a couple of times before giving up.
+      let cdnRes: Response | undefined;
+      let lastNetworkError: unknown;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          cdnRes = await this.fetchImpl(new URL(location, url), {
+            method: "GET",
+            headers: { "User-Agent": "zvid-mcp" },
+          });
+          break;
+        } catch (err) {
+          lastNetworkError = err;
+          if (attempt < 2) {
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
+      }
+      if (!cdnRes) {
+        throw new ZvidApiError(
+          502,
+          "CONTENT_FETCH_FAILED",
+          `Content host unreachable after 3 attempts: ${
+            lastNetworkError instanceof Error
+              ? lastNetworkError.message
+              : String(lastNetworkError)
+          }`
+        );
+      }
+      if (!cdnRes.ok) {
+        throw new ZvidApiError(
+          cdnRes.status,
+          `HTTP ${cdnRes.status}`,
+          `Content fetch failed with HTTP ${cdnRes.status}`
+        );
+      }
+      const text = await cdnRes.text();
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        throw new ZvidApiError(
+          502,
+          "INVALID_CONTENT",
+          "Content host returned non-JSON content"
+        );
+      }
+    }
+
+    return this.parseResponse<T>(res);
   }
 
   get<T = unknown>(path: string, query?: RequestOptions["query"]) {

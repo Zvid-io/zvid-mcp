@@ -14,6 +14,9 @@ const EXPECTED_TOOLS = [
   "get_element_docs",
   "get_example_payload",
   "plan_creative_video",
+  "find_matching_examples",
+  "start_from_example",
+  "render_from_example",
   "search_creative_library",
   "get_creative_asset",
   "list_stock_providers",
@@ -69,6 +72,16 @@ test("lists all Zvid tools", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, [...EXPECTED_TOOLS].sort());
+});
+
+test("advertises the example-first workflow as server instructions", async () => {
+  const client = await connectedClient(fetch);
+  const instructions = client.getInstructions();
+  assert.ok(instructions, "initialize result should carry instructions");
+  assert.match(instructions!, /example-first/);
+  assert.match(instructions!, /start_from_example/);
+  assert.match(instructions!, /render_from_example/);
+  assert.match(instructions!, /validate_project_json/);
 });
 
 test("get_render calls GET /api/jobs/:id and returns the job", async () => {
@@ -576,6 +589,743 @@ test("repair_project_json fixes fixable problems and reports changes", async () 
   assert.equal(body.repaired.quality, undefined);
   assert.equal(body.repaired.visuals.length, 1);
   assert.ok(body.changes.length >= 3);
+});
+
+const LIBRARY_LISTING = {
+  kind: "examples",
+  items: [
+    {
+      slug: "pro-ecom-flash-sale",
+      title: "Flash Sale Countdown",
+      description: "Flash sale promo with strike-through price and promo code",
+      meta: {
+        pack: "ecommerce",
+        premium: true,
+        resolution: "instagram-reel",
+        duration: 16,
+        scenes: 4,
+        thumbnail: "https://cdn.example/t.jpg",
+        preview: "https://cdn.example/p.mp4",
+      },
+    },
+    {
+      slug: "pro-holiday-sale",
+      title: "Holiday Sale Blast",
+      description: "Seasonal sale promo with gift badges",
+      meta: {
+        pack: "ecommerce",
+        premium: true,
+        resolution: "instagram-reel",
+        duration: 12,
+        scenes: 3,
+      },
+    },
+    {
+      slug: "ecom-hero-promo",
+      title: "Product Hero Promo",
+      description: "Hero product promo for online stores",
+      meta: { pack: "ecommerce", resolution: "hd", duration: 30, scenes: 3 },
+    },
+    {
+      slug: "gym-class-schedule",
+      title: "Gym Class Schedule",
+      description: "Weekly workout timetable for fitness studios",
+      meta: { pack: "fitness", resolution: "hd", duration: 12, scenes: 3 },
+    },
+    {
+      slug: "img-thumb-before-after",
+      title: "Before / After",
+      description: "Split-frame before and after thumbnail",
+      meta: { pack: "thumbnail", type: "image", resolution: "hd" },
+    },
+  ],
+};
+
+/** Router-style fake fetch: first matching prefix wins. */
+function routedFetch(
+  seen: string[],
+  routes: Array<[string, () => Response]>,
+): typeof fetch {
+  return (async (input: URL | RequestInfo) => {
+    const url = new URL(String(input));
+    seen.push(url.pathname + url.search);
+    for (const [prefix, respond] of routes) {
+      if (url.pathname.startsWith(prefix)) return respond();
+    }
+    return new Response(JSON.stringify({ items: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof fetch;
+}
+
+const jsonResponse = (body: unknown, status = 200) => () =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
+test("find_matching_examples ranks the library and decides adapt-example", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "find_matching_examples",
+      arguments: {
+        brief: "Flash sale promo video for our online shoe store",
+        type: "video",
+        aspectRatio: "9:16",
+        duration: 15,
+        variationMode: "consistent",
+      },
+    }),
+  );
+
+  assert.equal(seen[0], "/api/library/examples");
+  assert.equal(body.decision, "adapt-example");
+  assert.equal(body.poolSize, 5);
+  assert.equal(body.examples[0].slug, "pro-ecom-flash-sale");
+  assert.equal(body.examples[0].matchStrength, "strong");
+  assert.equal(body.examples[0].premium, true);
+  assert.match(body.premiumNote, /paid plan/);
+  assert.equal(body.assembleFrom, undefined, "strong match skips parts");
+  assert.ok(
+    !body.examples.some(
+      (c: { slug: string }) => c.slug === "img-thumb-before-after",
+    ),
+    "image examples are filtered out for video briefs",
+  );
+  assert.match(body.nextSteps[0], /start_from_example/);
+  assert.ok(Array.isArray(body.adaptationContract));
+});
+
+test("find_matching_examples falls back to assemble-similar with library parts", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [
+      [
+        "/api/library/design-templates",
+        jsonResponse({
+          items: [
+            {
+              slug: "gradient-hero",
+              title: "Gradient Hero",
+              description: "Animated gradient title",
+              meta: { thumbnail: "https://cdn.example/dt.jpg" },
+            },
+          ],
+        }),
+      ],
+      [
+        "/api/library/shapes",
+        jsonResponse({
+          items: [
+            {
+              slug: "callout-arrow",
+              title: "Callout Arrow",
+              description: "callout-",
+              meta: { width: 120, height: 80, svg: "<svg>big markup</svg>" },
+            },
+          ],
+        }),
+      ],
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "find_matching_examples",
+      arguments: { brief: "quantum physics lecture recap", type: "video" },
+    }),
+  );
+
+  assert.equal(body.decision, "assemble-similar");
+  assert.deepEqual(body.examples, []);
+  assert.equal(body.assembleFrom.designTemplates[0].slug, "gradient-hero");
+  assert.equal(body.assembleFrom.shapes[0].slug, "callout-arrow");
+  assert.equal(
+    body.assembleFrom.shapes[0].meta.svg,
+    undefined,
+    "inline SVG markup is trimmed from parts results",
+  );
+  assert.equal(body.assembleFrom.shapes[0].meta.width, 120);
+
+  assert.equal(seen[0], "/api/library/examples");
+  const partPaths = seen.slice(1);
+  assert.ok(partPaths.length > 0);
+  for (const p of partPaths) {
+    assert.match(
+      p,
+      /^\/api\/library\/(design-templates|canvas-presets|shapes)\?q=[^&+]+&limit=8&offset=0$/,
+      `parts searches must use short single-term queries: ${p}`,
+    );
+  }
+});
+
+test("plan_creative_video threads recentAssetSlugs into candidate exclusion", async () => {
+  const client = await connectedClient(
+    routedFetch([], [
+      [
+        "/api/render/creative-plan",
+        jsonResponse({ error: "NOT_FOUND", message: "not deployed" }, 404),
+      ],
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "plan_creative_video",
+      arguments: {
+        brief: "Flash sale promo for our online shoe store",
+        aspectRatio: "9:16",
+        duration: 15,
+        recentAssetSlugs: ["pro-ecom-flash-sale"],
+      },
+    }),
+  );
+  assert.ok(
+    !body.libraryCandidates.examples.some(
+      (c: { slug: string }) => c.slug === "pro-ecom-flash-sale",
+    ),
+    "recently used slugs must be excluded from candidates",
+  );
+  assert.ok(body.libraryCandidates.examples.length > 0);
+});
+
+test("start_from_example returns payload, adaptation map and template-route guidance", async () => {
+  const payload = {
+    type: "image",
+    resolution: "hd",
+    outputFormat: "png",
+    variables: { headline: "Big Sale", img: "https://example.com/a.jpg" },
+    visuals: [
+      {
+        type: "TEXT",
+        html: "<p>{{headline}}</p><p>50% off</p>",
+        style: { fontFamily: "Inter", fontSize: "64px", color: "#fff" },
+        width: 800,
+        height: 200,
+        position: "center-center",
+        track: 1,
+      },
+      { type: "IMAGE", src: "{{img}}", width: 1280, height: 720, track: 0 },
+    ],
+  };
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [
+      [
+        "/api/library/examples/img-thumb-before-after/content",
+        jsonResponse(payload),
+      ],
+      [
+        "/api/library/examples/img-thumb-before-after",
+        jsonResponse(
+          LIBRARY_LISTING.items.find(
+            (i) => i.slug === "img-thumb-before-after",
+          ),
+        ),
+      ],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "start_from_example",
+      arguments: { slug: "img-thumb-before-after" },
+    }),
+  );
+
+  assert.deepEqual(seen, [
+    "/api/library/examples/img-thumb-before-after",
+    "/api/library/examples/img-thumb-before-after/content",
+  ]);
+  assert.equal(body.item.slug, "img-thumb-before-after");
+  assert.equal(body.payload.type, "image");
+  assert.equal(body.adaptationMap.recommendedWorkflow, "template-render");
+  assert.deepEqual(
+    body.adaptationMap.variables.map((v: { name: string }) => v.name),
+    ["headline", "img"],
+  );
+  assert.equal(body.adaptationMap.textSlots[0].text, "{{headline}} 50% off");
+  assert.deepEqual(body.adaptationMap.mediaSlots[0].usesVariables, ["img"]);
+  assert.match(body.validationNote, /template/i);
+  assert.equal(body.validation, undefined);
+  assert.match(body.nextSteps.join("\n"), /create_template/);
+  assert.ok(Array.isArray(body.adaptationContract));
+});
+
+test("start_from_example validates static payloads for direct adaptation", async () => {
+  const payload = {
+    type: "video",
+    duration: 8,
+    visuals: [
+      { type: "TEXT", text: "Hello", style: { fontSize: "64px", color: "#ffffff" } },
+    ],
+  };
+  const client = await connectedClient(
+    routedFetch([], [
+      ["/api/library/examples/demo/content", jsonResponse(payload)],
+      ["/api/library/examples/demo", jsonResponse({ slug: "demo", meta: {} })],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "start_from_example",
+      arguments: { slug: "demo" },
+    }),
+  );
+  assert.equal(body.adaptationMap.recommendedWorkflow, "direct-adapt");
+  assert.equal(body.validation.valid, true);
+  assert.match(body.nextSteps.join("\n"), /validate_project_json/);
+});
+
+test("start_from_example surfaces premium locks with free alternatives", async () => {
+  const client = await connectedClient(
+    routedFetch([], [
+      [
+        "/api/library/examples/pro-ecom-flash-sale/content",
+        jsonResponse(
+          { error: "PREMIUM_REQUIRED", message: "Premium plan required" },
+          403,
+        ),
+      ],
+      [
+        "/api/library/examples/pro-ecom-flash-sale",
+        jsonResponse(LIBRARY_LISTING.items[0]),
+      ],
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "start_from_example",
+      arguments: { slug: "pro-ecom-flash-sale" },
+    }),
+  );
+  assert.equal(body.premiumLocked, true);
+  assert.match(body.message, /paid Zvid plan/);
+  assert.ok(
+    body.freeAlternatives.length > 0,
+    "free alternatives should be suggested",
+  );
+  assert.ok(
+    body.freeAlternatives.some(
+      (c: { slug: string }) => c.slug === "ecom-hero-promo",
+    ),
+    "the free ecommerce example should surface as an alternative",
+  );
+  assert.ok(
+    !body.freeAlternatives.some(
+      (c: { slug: string }) => c.slug === "pro-holiday-sale",
+    ),
+    "other premium examples must be excluded from alternatives",
+  );
+  assert.ok(
+    body.freeAlternatives.every((c: { premium: boolean }) => !c.premium),
+  );
+  assert.equal(body.payload, undefined);
+});
+
+test("start_from_example rethrows non-premium 401/403 errors", async () => {
+  const client = await connectedClient(
+    routedFetch([], [
+      [
+        "/api/library/examples/demo/content",
+        jsonResponse({ error: "FORBIDDEN", message: "WAF block" }, 403),
+      ],
+      ["/api/library/examples/demo", jsonResponse({ slug: "demo", meta: {} })],
+    ]),
+  );
+  const result = await client.callTool({
+    name: "start_from_example",
+    arguments: { slug: "demo" },
+  });
+  assert.equal(result.isError, true, "non-PREMIUM_REQUIRED 403 is a hard error");
+  const content = result.content as { type: string; text: string }[];
+  assert.match(content[0].text, /FORBIDDEN/);
+});
+
+test("get_creative_asset propagates premium content errors and honours includeContent:false", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [
+      [
+        "/api/library/examples/pro-x/content",
+        jsonResponse(
+          { error: "PREMIUM_REQUIRED", message: "Premium plan required" },
+          403,
+        ),
+      ],
+      ["/api/library/examples/pro-x", jsonResponse({ slug: "pro-x", meta: {} })],
+    ]),
+  );
+
+  const locked = await client.callTool({
+    name: "get_creative_asset",
+    arguments: { kind: "examples", slug: "pro-x", includeContent: true },
+  });
+  assert.equal(locked.isError, true);
+  const lockedText = (locked.content as { text: string }[])[0].text;
+  assert.match(lockedText, /PREMIUM_REQUIRED/);
+  assert.ok(!lockedText.includes("premiumLocked"), "no premiumLocked shape here");
+
+  seen.length = 0;
+  const metaOnly = firstJson(
+    await client.callTool({
+      name: "get_creative_asset",
+      arguments: { kind: "examples", slug: "pro-x", includeContent: false },
+    }),
+  );
+  assert.deepEqual(seen, ["/api/library/examples/pro-x"]);
+  assert.equal(metaOnly.item.slug, "pro-x");
+  assert.equal(metaOnly.content, undefined);
+});
+
+test("find_matching_examples reports adapt-or-assemble for partial matches with parts", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "find_matching_examples",
+      arguments: {
+        brief: "workout schedule video",
+        type: "video",
+        aspectRatio: "9:16",
+      },
+    }),
+  );
+  assert.equal(body.decision, "adapt-or-assemble");
+  assert.equal(body.examples[0].slug, "gym-class-schedule");
+  assert.equal(body.examples[0].matchStrength, "partial");
+  assert.match(body.decisionReason, /partial matches/);
+  assert.ok(body.assembleFrom, "partial matches still include assembly parts");
+});
+
+test("find_matching_examples honours explicit includeParts and threads filter args", async () => {
+  // includeParts: false suppresses every parts search even with no match
+  const seenOff: string[] = [];
+  const clientOff = await connectedClient(
+    routedFetch(seenOff, [
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
+  );
+  const off = firstJson(
+    await clientOff.callTool({
+      name: "find_matching_examples",
+      arguments: { brief: "quantum physics lecture recap", includeParts: false },
+    }),
+  );
+  assert.equal(off.decision, "assemble-similar");
+  assert.equal(off.assembleFrom, undefined);
+  assert.deepEqual(seenOff, ["/api/library/examples"]);
+
+  // includeParts: true forces parts even on a strong match
+  const seenOn: string[] = [];
+  const clientOn = await connectedClient(
+    routedFetch(seenOn, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+  );
+  const on = firstJson(
+    await clientOn.callTool({
+      name: "find_matching_examples",
+      arguments: {
+        brief: "Flash sale promo video for our online shoe store",
+        type: "video",
+        aspectRatio: "9:16",
+        includeParts: true,
+      },
+    }),
+  );
+  assert.equal(on.decision, "adapt-example");
+  assert.ok(on.assembleFrom, "includeParts: true must force parts");
+  const partPaths = seenOn.filter((p) => !p.startsWith("/api/library/examples"));
+  assert.ok(partPaths.length > 0);
+  for (const p of partPaths) {
+    assert.match(
+      p,
+      /^\/api\/library\/(design-templates|canvas-presets|shapes)\?q=[^&+]+&limit=8&offset=0$/,
+      `parts searches must use short single-term queries: ${p}`,
+    );
+  }
+
+  // excludeSlugs / excludePremium / limit all thread through to the ranker
+  const clientFiltered = await connectedClient(
+    routedFetch([], [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+  );
+  const filtered = firstJson(
+    await clientFiltered.callTool({
+      name: "find_matching_examples",
+      arguments: {
+        brief: "fitness before after promo",
+        type: "any",
+        excludeSlugs: ["gym-class-schedule"],
+        excludePremium: true,
+        limit: 1,
+        includeParts: false,
+      },
+    }),
+  );
+  assert.equal(filtered.examples.length, 1);
+  assert.equal(filtered.examples[0].slug, "ecom-hero-promo");
+});
+
+test("plan_creative_video enriches the plan with ranked library candidates", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [
+      [
+        "/api/render/creative-plan",
+        jsonResponse({ error: "NOT_FOUND", message: "not deployed" }, 404),
+      ],
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "plan_creative_video",
+      arguments: {
+        brief: "Flash sale promo for our online shoe store",
+        aspectRatio: "9:16",
+        duration: 15,
+        variationMode: "consistent",
+      },
+    }),
+  );
+
+  assert.equal(body.live, false, "plan falls back locally");
+  assert.ok(body.directions?.length >= 1);
+  assert.equal(body.libraryCandidates.decision, "adapt-example");
+  assert.equal(
+    body.libraryCandidates.examples[0].slug,
+    "pro-ecom-flash-sale",
+  );
+});
+
+test("find_matching_examples rotates comparable leads in fresh mode, stays fixed in consistent", async () => {
+  const twin = {
+    kind: "examples",
+    items: [
+      {
+        slug: "promo-alpha",
+        title: "Flash Sale Promo",
+        description: "Flash sale promo reel",
+        meta: { pack: "ecommerce", resolution: "instagram-reel", duration: 12 },
+      },
+      {
+        slug: "promo-beta",
+        title: "Flash Sale Promo B",
+        description: "Flash sale promo reel",
+        meta: { pack: "ecommerce", resolution: "instagram-reel", duration: 12 },
+      },
+    ],
+  };
+  const client = await connectedClient(
+    routedFetch([], [["/api/library/examples", jsonResponse(twin)]]),
+  );
+
+  const leads = new Set<string>();
+  for (const seed of [0, 1, 2, 3, 4, 5]) {
+    const body = firstJson(
+      await client.callTool({
+        name: "find_matching_examples",
+        arguments: {
+          brief: "flash sale promo",
+          type: "video",
+          variationSeed: seed,
+          includeParts: false,
+        },
+      }),
+    );
+    assert.equal(body.variation.comparableCount, 2);
+    leads.add(body.examples[0].slug);
+  }
+  assert.ok(leads.size >= 2, `fresh mode should vary the lead, got ${[...leads]}`);
+
+  const fixed = new Set<string>();
+  for (let i = 0; i < 3; i++) {
+    const body = firstJson(
+      await client.callTool({
+        name: "find_matching_examples",
+        arguments: {
+          brief: "flash sale promo",
+          type: "video",
+          variationMode: "consistent",
+          includeParts: false,
+        },
+      }),
+    );
+    assert.equal(body.variation, undefined, "consistent mode does not rotate");
+    fixed.add(body.examples[0].slug);
+  }
+  assert.equal(fixed.size, 1);
+});
+
+test("render_from_example composes template save, dry run and render in one call", async () => {
+  const payload = {
+    type: "video",
+    resolution: "instagram-reel",
+    variables: { headline: "Big Sale", promoCode: "SAVE20" },
+    scenes: [
+      {
+        duration: 5,
+        visuals: [{ type: "TEXT", html: "<p>{{headline}}</p>", style: {} }],
+      },
+    ],
+  };
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    seen.push({
+      method: init?.method ?? "GET",
+      path: url.pathname,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
+    const respond = (b: unknown) =>
+      new Response(JSON.stringify(b), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    if (url.pathname.endsWith("/content")) return respond(payload);
+    if (url.pathname === "/api/library/examples/ad-flash-sale")
+      return respond({ slug: "ad-flash-sale", meta: {} });
+    if (url.pathname === "/api/templates")
+      return respond({ template: { id: "tpl_00000000000000000001" } });
+    if (url.pathname.endsWith("/preview")) return respond({ valid: true });
+    if (url.pathname === "/api/render/api-key")
+      return respond({ jobId: "job-9", status: "queued" });
+    return respond({});
+  }) as typeof fetch;
+
+  const client = await connectedClient(fetchImpl);
+  const body = firstJson(
+    await client.callTool({
+      name: "render_from_example",
+      arguments: {
+        slug: "ad-flash-sale",
+        variables: { headline: "70% Off Kicks", promoCode: "KICK20", oops: "typo" },
+      },
+    }),
+  );
+
+  assert.deepEqual(
+    seen.map((s) => `${s.method} ${s.path}`),
+    [
+      "GET /api/library/examples/ad-flash-sale",
+      "GET /api/library/examples/ad-flash-sale/content",
+      "POST /api/templates",
+      "POST /api/templates/tpl_00000000000000000001/preview",
+      "POST /api/render/api-key",
+    ],
+  );
+  assert.equal(body.rendered, true);
+  assert.equal(body.templateId, "tpl_00000000000000000001");
+  assert.equal(body.render.jobId, "job-9");
+  assert.deepEqual(seen[4].body.template, "tpl_00000000000000000001");
+  assert.equal(seen[4].body.variables.headline, "70% Off Kicks");
+  assert.deepEqual(body.unknownVariables, ["oops"]);
+  assert.match(body.nextSteps.join("\n"), /get_render/);
+});
+
+test("render_from_example uses the image endpoint for image examples and stops on preview failure", async () => {
+  const imagePayload = {
+    type: "image",
+    resolution: "hd",
+    variables: { title: "Hello" },
+    visuals: [{ type: "TEXT", text: "{{title}}", style: {} }],
+  };
+  const routes = (previewStatus: number) =>
+    (async (input: URL | RequestInfo, init?: RequestInit) => {
+      const url = new URL(String(input));
+      const respond = (b: unknown, status = 200) =>
+        new Response(JSON.stringify(b), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (url.pathname.endsWith("/content")) return respond(imagePayload);
+      if (url.pathname === "/api/library/examples/img-card")
+        return respond({ slug: "img-card", meta: { type: "image" } });
+      if (url.pathname === "/api/templates")
+        return respond({ template: { id: "tpl_00000000000000000002" } });
+      if (url.pathname.endsWith("/preview"))
+        return previewStatus === 200
+          ? respond({ valid: true })
+          : respond(
+              { error: "Invalid", message: "bad variables", details: [{ field: "title" }] },
+              400,
+            );
+      if (url.pathname === "/api/render/image/api-key")
+        return respond({ jobId: "img-job-1" });
+      if (url.pathname === "/api/render/api-key")
+        return respond({ jobId: "WRONG-ENDPOINT" });
+      return respond({});
+    }) as typeof fetch;
+
+  const okClient = await connectedClient(routes(200));
+  const ok = firstJson(
+    await okClient.callTool({
+      name: "render_from_example",
+      arguments: { slug: "img-card", variables: { title: "New Title" } },
+    }),
+  );
+  assert.equal(ok.rendered, true);
+  assert.equal(ok.projectType, "image");
+  assert.equal(ok.render.jobId, "img-job-1", "image examples render via the image endpoint");
+
+  const failClient = await connectedClient(routes(400));
+  const fail = firstJson(
+    await failClient.callTool({
+      name: "render_from_example",
+      arguments: { slug: "img-card", variables: { title: "New Title" } },
+    }),
+  );
+  assert.equal(fail.rendered, false);
+  assert.ok(fail.previewErrors, "preview failure is surfaced");
+  assert.equal(fail.templateId, "tpl_00000000000000000002");
+});
+
+test("render_from_example reports premium locks without creating a template", async () => {
+  const seen: string[] = [];
+  const client = await connectedClient(
+    routedFetch(seen, [
+      [
+        "/api/library/examples/pro-ecom-flash-sale/content",
+        jsonResponse({ error: "PREMIUM_REQUIRED", message: "Premium" }, 403),
+      ],
+      [
+        "/api/library/examples/pro-ecom-flash-sale",
+        jsonResponse(LIBRARY_LISTING.items[0]),
+      ],
+    ]),
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "render_from_example",
+      arguments: { slug: "pro-ecom-flash-sale" },
+    }),
+  );
+  assert.equal(body.premiumLocked, true);
+  assert.ok(!seen.some((p) => p.startsWith("/api/templates")), "no template created");
+});
+
+test("plan_creative_video degrades gracefully when the library is unreachable", async () => {
+  const fetchImpl = (async () =>
+    new Response(JSON.stringify({ error: "NOT_FOUND", message: "down" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    })) as typeof fetch;
+  const client = await connectedClient(fetchImpl);
+  const body = firstJson(
+    await client.callTool({
+      name: "plan_creative_video",
+      arguments: { brief: "Introduce an AI analytics platform" },
+    }),
+  );
+  assert.ok(body.directions?.length >= 1, "the plan itself still returns");
+  assert.equal(body.libraryCandidates.unavailable, true);
+  assert.match(body.libraryCandidates.note, /search_creative_library/);
 });
 
 test("API errors surface as isError tool results", async () => {

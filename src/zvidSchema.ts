@@ -1300,6 +1300,7 @@ export const VALIDATION_NOTES: string[] = [
 // ---------------------------------------------------------------------------
 
 export const AUTHORING_GUIDELINES: string[] = [
+  "START FROM THE LIBRARY: hundreds of professionally designed examples are published in the creative library — match the brief first (MCP: plan_creative_video / find_matching_examples, REST: GET /api/library/examples) and ADAPT the best one (keep layout/animations; swap copy, media, brand) instead of composing a layout from scratch. Compose from design-templates/canvas-presets/shapes only when no example is genuinely close.",
   'STRUCTURE WITH SCENES: for sequential messaging (hook → value → CTA) use `scenes`, one message per scene (2.5–5s each) with a subtle transition ("fade", transitionDuration 0.5) — NOT several timed texts stacked on one canvas. Scenes guarantee messages never collide.',
   'LAYOUT MODEL (critical): a `position` preset sets BOTH the canvas point and the element anchor, and OVERWRITES x/y. Offsets only work with position: "custom" + explicit x/y (+ anchor, default top-left). Two elements with the same preset render exactly on top of each other.',
   'EDGE MARGINS: presets are FLUSH with the frame edge ("bottom-center" touches the bottom, no margin). For breathing room use position: "custom" — e.g. a bottom CTA on a 720p canvas: { position: "custom", x: 640, y: 640, anchor: "center-center" }.',
@@ -1705,27 +1706,33 @@ function desiredSceneCount(duration: number): number {
   return 7;
 }
 
-function creativeQueryTerms(brief: string): string[] {
-  const stop = new Set([
-    "about",
-    "after",
-    "before",
-    "create",
-    "from",
-    "make",
-    "that",
-    "their",
-    "this",
-    "video",
-    "with",
-    "your",
-  ]);
-  const terms = brief
+const CREATIVE_STOPWORDS = new Set([
+  "about", "after", "all", "and", "any", "are", "been", "before", "best",
+  "big", "but", "can", "could", "create", "did", "does", "each", "for",
+  "from", "get", "got", "great", "had", "has", "have", "her", "him", "his",
+  "how", "into", "its", "just", "like", "make", "more", "most", "need",
+  "new", "now", "off", "one", "only", "onto", "our", "out", "over", "per",
+  "please", "should", "some", "such", "than", "that", "the", "their",
+  "them", "then", "they", "this", "those", "top", "two", "use", "very",
+  "want", "was", "way", "were", "what", "when", "where", "which", "who",
+  "why", "will", "with", "would", "you", "your", "video",
+]);
+
+/**
+ * Extract the subject terms of a brief: lowercased, punctuation stripped,
+ * stopwords and short words removed. Used for library/stock search queries.
+ */
+export function briefSubjectTerms(brief: string, max = 6): string[] {
+  const terms = String(brief ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9 ]+/g, " ")
     .split(/\s+/)
-    .filter((term) => term.length > 2 && !stop.has(term));
-  return [...new Set(terms)].slice(0, 6);
+    .filter((term) => term.length > 2 && !CREATIVE_STOPWORDS.has(term));
+  return [...new Set(terms)].slice(0, max);
+}
+
+function creativeQueryTerms(brief: string): string[] {
+  return briefSubjectTerms(brief, 6);
 }
 
 export function buildCreativePlan(
@@ -1896,6 +1903,697 @@ export function buildCreativePlan(
       "Validate, fix every error and layout warning, then render a draft before the final.",
     ],
     warnings,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Creative-library discovery & adaptation
+//
+// Pure helpers used by the MCP server (and available to every integration)
+// to rank published /api/library items against a brief and to turn a chosen
+// example into an adaptation worksheet. The quality premise: published
+// examples carry the layout/motion design — clients adapt copy, media and
+// brand tokens instead of composing layouts from scratch.
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolution-preset name → pixel size, mirroring package RESOLUTION_PRESETS.
+ * Used only to derive an aspect ratio from a library item's meta.resolution.
+ * "snapshat" is a historical package typo that older published examples carry.
+ */
+export const RESOLUTION_PRESET_DIMENSIONS: Record<
+  string,
+  readonly [number, number]
+> = {
+  sd: [640, 480],
+  hd: [1280, 720],
+  "full-hd": [1920, 1080],
+  squared: [1080, 1080],
+  "youtube-short": [1080, 1920],
+  "youtube-video": [1920, 1080],
+  tiktok: [1080, 1920],
+  "instagram-reel": [1080, 1920],
+  "instagram-post": [1080, 1080],
+  "instagram-story": [1080, 1920],
+  "instagram-feed": [1080, 1080],
+  "twitter-landscape": [1200, 675],
+  "twitter-portrait": [1080, 1350],
+  "twitter-square": [1080, 1080],
+  "facebook-video": [1080, 1920],
+  "facebook-story": [1080, 1920],
+  "facebook-post": [1080, 1080],
+  snapchat: [1080, 1920],
+  snapshat: [1080, 1920],
+};
+
+/**
+ * Library-example category (meta.pack) → topic/industry synonyms, so a brief
+ * mentioning "restaurant" surfaces the local pack even though no example title
+ * contains the word. Mirrors editor/data/exampleCategories.ts keywords.
+ */
+export const EXAMPLE_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  thumbnail: ["thumbnail", "thumbnails", "cover", "youtube", "poster", "clickbait", "hook", "preview", "cover image", "video cover", "og"],
+  ecommerce: ["ecommerce", "e-commerce", "shop", "store", "product", "retail", "dtc", "dropshipping", "sale", "discount", "promo", "checkout", "brand", "online store", "shopify"],
+  agency: ["ad", "ads", "advert", "advertising", "creative", "marketing", "campaign", "ugc", "performance", "roas", "agency", "a/b test"],
+  realty: ["property", "listing", "home", "house", "apartment", "realtor", "realty", "mortgage", "rent", "agent", "open house", "estate"],
+  auto: ["car", "cars", "vehicle", "dealer", "dealership", "automotive", "motor", "suv", "ev", "test drive", "trade-in", "auto"],
+  saas: ["software", "app", "saas", "developer", "api", "product", "startup", "tech", "b2b", "changelog", "feature", "onboarding", "integration"],
+  ogimage: ["open graph", "og image", "og", "blog", "article", "link preview", "social share", "meta", "docs", "changelog", "seo", "twitter card"],
+  ai: ["ai", "artificial intelligence", "ml", "machine learning", "llm", "model", "prompt", "gpt", "agent", "genai", "automation", "neural"],
+  social: ["creator", "influencer", "social", "tiktok", "reels", "reel", "instagram", "youtube", "content", "podcast", "follower", "thread", "meme"],
+  news: ["news", "rss", "media", "headline", "breaking", "journalism", "press", "bulletin", "report", "article"],
+  finance: ["finance", "investment", "invest", "crypto", "bitcoin", "trading", "stocks", "fintech", "money", "bank", "portfolio", "market"],
+  hr: ["hr", "recruiting", "recruit", "hiring", "jobs", "job", "career", "talent", "employee", "onboarding", "workplace", "vacancy"],
+  events: ["event", "events", "webinar", "conference", "summit", "meetup", "workshop", "ticket", "rsvp", "speaker", "agenda", "expo"],
+  edtech: ["education", "edtech", "course", "learn", "learning", "school", "tutorial", "lesson", "quiz", "student", "teach", "exam"],
+  travel: ["travel", "hotel", "tourism", "trip", "vacation", "flight", "destination", "booking", "resort", "holiday", "tour", "getaway"],
+  local: ["restaurant", "food", "cafe", "café", "menu", "dish", "dining", "delivery", "chef", "coffee", "bar", "eatery", "meal"],
+  fitness: ["fitness", "wellness", "gym", "workout", "health", "yoga", "nutrition", "trainer", "exercise", "coach", "diet", "training"],
+  apppersonal: ["app", "personalized", "personalization", "retention", "engagement", "notification", "milestone", "streak", "wrapped", "recap", "reminder"],
+  dataviz: ["dataviz", "data", "visualization", "chart", "graph", "report", "dashboard", "analytics", "metrics", "kpi", "stats", "infographic", "insights"],
+  sports: ["sports", "sport", "match", "game", "team", "score", "fixture", "league", "athlete", "tournament", "player", "result"],
+  localservice: ["local service", "plumber", "salon", "cleaning", "contractor", "repair", "handyman", "appointment", "booking", "trades", "service", "electrician"],
+  marketplace: ["marketplace", "classified", "classifieds", "listing", "listings", "seller", "buyer", "secondhand", "rental", "gig", "peer-to-peer"],
+  hotel: ["hotel", "hospitality", "resort", "room", "guest", "booking", "spa", "check-in", "checkout", "concierge", "suite", "stay"],
+  health: ["healthcare", "clinic", "doctor", "medical", "patient", "appointment", "dental", "dentist", "pharmacy", "telehealth", "hospital", "checkup"],
+  beauty: ["beauty", "salon", "spa", "hair", "nails", "skincare", "makeup", "stylist", "barber", "treatment", "manicure", "facial"],
+  recipe: ["recipe", "recipes", "cooking", "ingredients", "baking", "meal prep", "kitchen", "dish", "cuisine", "nutrition", "vegetarian", "chef"],
+  language: ["language", "vocabulary", "grammar", "translation", "word of the day", "phrase", "idiom", "pronunciation", "bilingual", "learn english"],
+  books: ["book", "books", "author", "publishing", "reading", "novel", "ebook", "audiobook", "bestseller", "bookclub", "library", "literature"],
+  music: ["music", "song", "album", "artist", "concert", "playlist", "dj", "festival", "streaming", "track", "band", "tour"],
+  podcast: ["podcast", "episode", "guest", "audiogram", "show", "listener", "season", "clip", "interview", "host", "subscribe"],
+  gaming: ["gaming", "game", "esports", "stream", "streamer", "tournament", "twitch", "leaderboard", "clan", "patch", "giveaway", "gamer"],
+  construction: ["construction", "architecture", "renovation", "contractor", "builder", "interior design", "floor plan", "development", "engineering", "remodel"],
+  legal: ["legal", "law", "lawyer", "attorney", "firm", "consultation", "contract", "immigration", "tax", "compliance", "notary", "court"],
+  insurance: ["insurance", "policy", "coverage", "claim", "premium", "renewal", "broker", "insurer", "deductible", "quote", "protection"],
+  logistics: ["logistics", "delivery", "shipping", "courier", "tracking", "parcel", "package", "freight", "warehouse", "fleet", "customs", "shipment"],
+  industrial: ["manufacturing", "industrial", "factory", "production", "machinery", "quality control", "supplier", "plant", "engineering", "b2b"],
+  agriculture: ["agriculture", "farming", "farm", "crop", "harvest", "livestock", "organic", "produce", "tractor", "irrigation", "agri", "farmer"],
+  nonprofit: ["nonprofit", "charity", "donation", "fundraising", "volunteer", "ngo", "cause", "impact", "donor", "campaign", "giving", "foundation"],
+  government: ["government", "public", "municipality", "city", "civic", "permit", "election", "announcement", "road closure", "utility", "citizen"],
+  community: ["community", "religious", "faith", "mosque", "church", "prayer", "gathering", "congregation", "charity", "youth", "volunteer"],
+  weddings: ["wedding", "weddings", "celebration", "invitation", "save the date", "anniversary", "birthday", "baby shower", "graduation", "party", "rsvp"],
+  adpromo: ["commercial", "promo", "ad", "ads", "sale", "flash sale", "discount", "funny", "retro", "80s", "mascot", "offer", "advert", "campaign"],
+  explainer: ["explainer", "explain", "how it works", "how to", "tutorial", "walkthrough", "steps", "character", "mascot", "service", "process"],
+  infographic: ["infographic", "infographics", "stats", "statistics", "data", "chart", "graph", "numbers", "facts", "percent", "animated"],
+  birthday: ["birthday", "bday", "cake", "celebration", "greetings", "party", "balloons", "wishes", "staff birthday", "team birthday"],
+  welcome: ["welcome", "intro", "introduction", "new hire", "new employee", "meet the team", "team", "teammate", "introduce", "aboard"],
+  recruiting: ["hiring", "we're hiring", "job", "job ad", "recruiting", "recruitment", "vacancy", "career", "resume", "cv", "apply", "talent", "job offer"],
+  praise: ["praise", "thanks", "thank you", "kudos", "shout-out", "recognition", "great job", "you rock", "employee of the month", "appreciation"],
+  updates: ["update", "weekly", "monthly", "quarterly", "results", "report", "briefing", "newsletter", "all-hands", "board meeting", "year in review", "status", "company update"],
+  internalcomms: ["internal", "policy", "onboarding", "training", "wellness", "mental health", "leadership", "mission", "culture", "workplace", "announcement", "hybrid work"],
+  launch: ["launch", "product launch", "demo", "product demo", "app demo", "release", "case study", "showcase", "reveal"],
+  occasions: ["holiday", "holidays", "christmas", "wedding invitation", "slideshow", "party", "event", "presentation", "end of year", "school", "quiz night", "office party"],
+  fun: ["fun", "funny", "trailer", "book trailer", "film", "movie", "credits", "superhero", "celebrate", "character", "cinematic"],
+};
+
+/** Aspect ratio (w/h) for a library item's meta.resolution, or null if unknown. */
+export function libraryAspectRatio(resolution: unknown): number | null {
+  if (typeof resolution !== "string" || !resolution) return null;
+  const preset = Object.prototype.hasOwnProperty.call(
+    RESOLUTION_PRESET_DIMENSIONS,
+    resolution,
+  )
+    ? RESOLUTION_PRESET_DIMENSIONS[resolution]
+    : undefined;
+  if (preset) return preset[0] / preset[1];
+  const m = /^(\d+)\s*[x×]\s*(\d+)$/.exec(resolution.trim());
+  if (m && Number(m[2]) > 0) return Number(m[1]) / Number(m[2]);
+  return null;
+}
+
+function aspectFromRatioString(ratio: string | undefined): number | null {
+  if (!ratio || ratio === "custom") return null;
+  const m = /^(\d+):(\d+)$/.exec(ratio);
+  if (!m || Number(m[2]) === 0) return null;
+  return Number(m[1]) / Number(m[2]);
+}
+
+const recordOf = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v);
+
+/** Crude singularizer so "cats"/"cat" and "classes"/"class" count as one concept. */
+function stemToken(term: string): string {
+  if (term.length > 4 && /(?:s|x|z|ch|sh)es$/.test(term))
+    return term.slice(0, -2);
+  if (term.length > 4 && term.endsWith("s") && !term.endsWith("ss"))
+    return term.slice(0, -1);
+  return term;
+}
+
+/**
+ * Distinct stemmed subject tokens of a text (stopwords and short words
+ * dropped). Both the brief and each item haystack pass through this, so a
+ * shared word counts exactly once regardless of plural form.
+ */
+function matchStems(text: string): Set<string> {
+  const stems = new Set<string>();
+  for (const term of String(text ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .split(/\s+/)) {
+    if (term.length <= 2 || CREATIVE_STOPWORDS.has(term)) continue;
+    stems.add(stemToken(term));
+  }
+  return stems;
+}
+
+/** Lowercase, punctuation → spaces, collapsed, space-padded for word-boundary includes(). */
+function paddedNormalize(text: string): string {
+  const normalized = String(text ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized ? ` ${normalized} ` : "";
+}
+
+/** A row from GET /api/library/:kind (metadata only, content stays on CDN). */
+export interface LibraryListItem {
+  slug: string;
+  kind?: string;
+  title?: string | null;
+  description?: string | null;
+  meta?: Record<string, unknown> | null;
+  contentUrl?: string | null;
+  [key: string]: unknown;
+}
+
+export interface LibraryMatchOptions {
+  /** The creative brief to match against. */
+  brief: string;
+  /** Restrict candidates to video or still-image examples ("any" = both). */
+  projectType?: "video" | "image" | "any";
+  /** Requested aspect ratio like "16:9"; orientation mismatches are penalized. */
+  aspectRatio?: string;
+  /** Target video duration in seconds (soft proximity signal). */
+  duration?: number;
+  /** Slugs to exclude (anti-repetition / already rejected). */
+  excludeSlugs?: string[];
+  /** Skip premium examples (their content is plan-gated). */
+  excludePremium?: boolean;
+  /** Max candidates returned (default 8). */
+  limit?: number;
+}
+
+export interface ScoredLibraryCandidate {
+  slug: string;
+  title: string;
+  description: string;
+  pack: string | null;
+  premium: boolean;
+  type: "video" | "image";
+  resolution: string | null;
+  duration: number | null;
+  scenes: number | null;
+  thumbnail: string | null;
+  preview: string | null;
+  score: number;
+  matchStrength: "strong" | "partial" | "weak";
+  matchedOn: string[];
+}
+
+/** Score bands for scoreLibraryCandidates → matchStrength. */
+export const LIBRARY_MATCH_THRESHOLDS = { strong: 8, partial: 4 } as const;
+
+/**
+ * Rank library example metadata against a brief. Pure and local — no HTTP —
+ * so callers can fetch the full listing once and match far better than the
+ * server's AND-of-substrings q search. Items with no TOPICAL signal (shared
+ * subject terms or a category-keyword hit) are omitted entirely — aspect and
+ * duration only refine topical matches, they never create one.
+ */
+export function scoreLibraryCandidates(
+  items: LibraryListItem[],
+  opts: LibraryMatchOptions,
+): ScoredLibraryCandidate[] {
+  const briefStems = matchStems(String(opts.brief ?? ""));
+  const paddedBrief = paddedNormalize(String(opts.brief ?? ""));
+  const projectType =
+    opts.projectType === "image" || opts.projectType === "video"
+      ? opts.projectType
+      : "any";
+  const wantAspect = aspectFromRatioString(opts.aspectRatio);
+  const exclude = new Set(
+    (opts.excludeSlugs ?? []).map((s) => String(s).toLowerCase()),
+  );
+  const rawLimit = Number(opts.limit);
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit >= 1
+      ? Math.min(Math.floor(rawLimit), 24)
+      : 8;
+
+  // Word-boundary keyword matching over the normalized brief, so short
+  // ("ai", "hr"), hyphenated ("e-commerce" -> "e commerce") and multi-word
+  // ("open house") keywords all work without substring false positives.
+  const briefPacks = new Set<string>();
+  if (paddedBrief) {
+    for (const [pack, keywords] of Object.entries(EXAMPLE_CATEGORY_KEYWORDS)) {
+      for (const keyword of keywords) {
+        const padded = paddedNormalize(keyword);
+        if (padded && paddedBrief.includes(padded)) {
+          briefPacks.add(pack);
+          break;
+        }
+      }
+    }
+  }
+
+  const scored: ScoredLibraryCandidate[] = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!recordOf(item) || typeof item.slug !== "string" || !item.slug)
+      continue;
+    if (exclude.has(item.slug.toLowerCase())) continue;
+    const meta = recordOf(item.meta) ? item.meta : {};
+    const premium = Boolean(meta.premium);
+    if (premium && opts.excludePremium) continue;
+    const type: "video" | "image" = meta.type === "image" ? "image" : "video";
+    if (projectType !== "any" && type !== projectType) continue;
+
+    const title = typeof item.title === "string" ? item.title : "";
+    const description =
+      typeof item.description === "string" ? item.description : "";
+    const pack = typeof meta.pack === "string" ? meta.pack : null;
+    const haystack = matchStems(
+      `${title} ${description} ${item.slug.replace(/-/g, " ")}`,
+    );
+
+    let score = 0;
+    const matchedOn: string[] = [];
+
+    let overlap = 0;
+    for (const stem of briefStems) {
+      if (haystack.has(stem)) overlap += 1;
+    }
+    if (overlap > 0) {
+      score += Math.min(overlap, 4) * 2;
+      matchedOn.push(`${overlap} shared term${overlap === 1 ? "" : "s"}`);
+    }
+
+    if (pack && briefPacks.has(pack)) {
+      score += 4;
+      matchedOn.push(`category "${pack}"`);
+    }
+
+    // No topical connection to the brief: skip. Aspect/duration alone must
+    // not surface random same-shaped examples (e.g. for non-Latin briefs).
+    if (score <= 0) continue;
+
+    const itemAspect = libraryAspectRatio(meta.resolution);
+    if (wantAspect !== null && itemAspect !== null) {
+      if (Math.abs(Math.log(itemAspect / wantAspect)) < 0.06) {
+        score += 2;
+        matchedOn.push("aspect match");
+      } else {
+        const wantLandscape = wantAspect > 1.05;
+        const itemLandscape = itemAspect > 1.05;
+        const wantSquare = Math.abs(wantAspect - 1) <= 0.05;
+        const itemSquare = Math.abs(itemAspect - 1) <= 0.05;
+        if (!wantSquare && !itemSquare && wantLandscape !== itemLandscape) {
+          score -= 3;
+          matchedOn.push("orientation mismatch");
+        }
+      }
+    }
+
+    const itemDuration =
+      typeof meta.duration === "number" && Number.isFinite(meta.duration)
+        ? meta.duration
+        : null;
+    if (
+      type === "video" &&
+      itemDuration !== null &&
+      typeof opts.duration === "number" &&
+      opts.duration > 0 &&
+      Math.abs(itemDuration - opts.duration) / opts.duration <= 0.5
+    ) {
+      score += 1;
+      matchedOn.push("similar duration");
+    }
+
+    if (score <= 0) continue;
+
+    scored.push({
+      slug: item.slug,
+      title,
+      description,
+      pack,
+      premium,
+      type,
+      resolution: typeof meta.resolution === "string" ? meta.resolution : null,
+      duration: itemDuration,
+      scenes:
+        typeof meta.scenes === "number" && Number.isFinite(meta.scenes)
+          ? meta.scenes
+          : null,
+      thumbnail: typeof meta.thumbnail === "string" ? meta.thumbnail : null,
+      preview: typeof meta.preview === "string" ? meta.preview : null,
+      score,
+      matchStrength:
+        score >= LIBRARY_MATCH_THRESHOLDS.strong
+          ? "strong"
+          : score >= LIBRARY_MATCH_THRESHOLDS.partial
+            ? "partial"
+            : "weak",
+      matchedOn,
+    });
+  }
+
+  scored.sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug));
+  return scored.slice(0, limit);
+}
+
+/**
+ * Anti-repetition: when several candidates are comparably good (same
+ * matchStrength as the best and within 2 score points), rotate which one
+ * leads based on a variation seed — so identical repeated briefs do not
+ * always adapt the same example. Pure and deterministic under a fixed seed;
+ * pass a fresh seed (e.g. a timestamp) per request for variety.
+ */
+export function rotateComparableCandidates(
+  candidates: ScoredLibraryCandidate[],
+  seed: string | number,
+): {
+  candidates: ScoredLibraryCandidate[];
+  rotated: boolean;
+  comparableCount: number;
+} {
+  if (!Array.isArray(candidates) || candidates.length < 2) {
+    return {
+      candidates: candidates ?? [],
+      rotated: false,
+      comparableCount: candidates?.length ?? 0,
+    };
+  }
+  const best = candidates[0];
+  const band = candidates.filter(
+    (c) =>
+      c.matchStrength === best.matchStrength && c.score >= best.score - 2,
+  );
+  if (band.length < 2) {
+    return { candidates, rotated: false, comparableCount: band.length };
+  }
+  const pick = band[creativeSeed(String(seed), String(seed)) % band.length];
+  if (pick.slug === best.slug) {
+    return { candidates, rotated: false, comparableCount: band.length };
+  }
+  const reordered = [
+    pick,
+    ...candidates.filter((c) => c.slug !== pick.slug),
+  ];
+  return { candidates: reordered, rotated: true, comparableCount: band.length };
+}
+
+/**
+ * The rules for adapting a library example without destroying its design.
+ * Returned by the MCP start_from_example tool and safe to show any client.
+ */
+export const ADAPTATION_CONTRACT: string[] = [
+  "KEEP the example's layout skeleton — scene structure, element positions, sizes, animations, timings and transitions. That skeleton IS the premium design; rebuilding it from scratch is how quality is lost.",
+  "If the example feels too complex to edit, do NOT simplify it: never drop its media, SVG or GIF elements, never collapse designed scenes into plain text-on-background. Change variable values (or the render_from_example tool) instead — the complexity you would remove is the design.",
+  "If the example defines `variables`, adapt through them: change variable VALUES only (copy, media URLs, colors, labels) and leave `{{placeholder}}` references untouched. Variables are inert on a direct payload render — the easiest correct path is render_from_example { slug, variables }; the manual equivalent is create_template, preview_template, then create_render { template, variables }.",
+  "If any element uses `condition` or `iterate`, the template route is REQUIRED — those only resolve server-side when rendering a template.",
+  "Rewrite topic-specific copy at roughly the same length (±30%) so boxes, wrapping and type scale still fit; never shrink fontSize or widen boxes to squeeze in longer copy.",
+  "Swap media via search_stock_media keeping each slot's media type (image stays image, video stays video); use the full-quality src URL — never the small preview URL — with natural size >= the slot's rendered size.",
+  "Apply brand tokens globally, not per element: accent/background colors and at most 1-2 font families, changed consistently everywhere.",
+  "Do not add or remove scenes or visuals unless the brief requires it; when you must, clone an existing scene of the same role and re-balance durations.",
+  "Finish with validate_project_json (remote: true) on the final payload — or preview_template for template renders — and fix every error AND layout warning before rendering.",
+];
+
+const VARIABLE_REF_REGEX = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+
+function extractVariableRefs(json: string): string[] {
+  const names = new Set<string>();
+  for (const match of json.matchAll(VARIABLE_REF_REGEX)) names.add(match[1]);
+  return [...names];
+}
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|li|h[1-6]|span)>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export interface AdaptationTextSlot {
+  /** JSON path of the element, e.g. "scenes[1].visuals[2]". */
+  path: string;
+  sceneIndex: number | null;
+  track: number | null;
+  /** Current copy (html stripped to text; {{placeholders}} left literal). */
+  text: string;
+  fontFamily: string | null;
+  fontSize: string | number | null;
+  position: string | null;
+  width: number | null;
+  height: number | null;
+  usesVariables: string[];
+}
+
+export interface AdaptationMediaSlot {
+  path: string;
+  sceneIndex: number | null;
+  track: number | null;
+  type: string;
+  src: string;
+  width: number | null;
+  height: number | null;
+  resize: string | null;
+  usesVariables: string[];
+}
+
+export interface AdaptationMap {
+  projectType: "video" | "image";
+  /** Output settings to preserve (resolution, format, background...). */
+  output: Record<string, unknown>;
+  /** Declared template variables with defaults and reference counts. */
+  variables: { name: string; defaultValue: unknown; references: number }[];
+  /** {{refs}} appearing in the payload without a matching `variables` entry —
+   * these have no default and must be replaced with real values by hand. */
+  undeclaredRefs: string[];
+  templateFeatures: {
+    usesVariables: boolean;
+    usesCondition: boolean;
+    usesIterate: boolean;
+  };
+  /**
+   * "template-render": save via create_template and render with variables
+   * (required for condition/iterate; correct whenever DECLARED variables
+   * exist). "direct-adapt": edit the payload in place and render it directly
+   * — also chosen when the only {{refs}} are undeclared (no defaults to
+   * render with; replace them inline instead).
+   */
+  recommendedWorkflow: "template-render" | "direct-adapt";
+  sceneCount: number;
+  scenes: {
+    index: number;
+    duration: number | null;
+    transition: string | null;
+    visualCount: number;
+  }[];
+  textSlots: AdaptationTextSlot[];
+  mediaSlots: AdaptationMediaSlot[];
+  svgCount: number;
+  audios: { path: string; src: string }[];
+  hasSubtitle: boolean;
+  fonts: string[];
+}
+
+/**
+ * Summarize a library example's payload into the slots a client should adapt
+ * (variables, copy, media) and the structure it must preserve. Pure; tolerant
+ * of any malformed input.
+ */
+export function buildAdaptationMap(
+  payload: Record<string, unknown>,
+): AdaptationMap {
+  const source = recordOf(payload) ? payload : {};
+  const projectType = source.type === "image" ? "image" : "video";
+
+  const output: Record<string, unknown> = {};
+  for (const key of [
+    "type",
+    "name",
+    "resolution",
+    "width",
+    "height",
+    "outputFormat",
+    "frameRate",
+    "backgroundColor",
+    "quality",
+    "transparent",
+    "duration",
+  ]) {
+    if (source[key] !== undefined) output[key] = source[key];
+  }
+
+  let wholeJson = "";
+  try {
+    wholeJson = JSON.stringify(source) ?? "";
+  } catch {
+    wholeJson = "";
+  }
+
+  const variables: AdaptationMap["variables"] = [];
+  if (recordOf(source.variables)) {
+    for (const [name, defaultValue] of Object.entries(source.variables)) {
+      const pattern = new RegExp(
+        `\\{\\{\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\}\\}`,
+        "g",
+      );
+      variables.push({
+        name,
+        defaultValue,
+        references: (wholeJson.match(pattern) ?? []).length,
+      });
+    }
+  }
+
+  const scenes: AdaptationMap["scenes"] = [];
+  const textSlots: AdaptationTextSlot[] = [];
+  const mediaSlots: AdaptationMediaSlot[] = [];
+  let svgCount = 0;
+  let usesCondition = false;
+  let usesIterate = false;
+
+  const walkVisuals = (
+    visuals: unknown,
+    basePath: string,
+    sceneIndex: number | null,
+  ) => {
+    if (!Array.isArray(visuals)) return;
+    visuals.forEach((visual, i) => {
+      if (!recordOf(visual)) return;
+      if (visual.condition !== undefined) usesCondition = true;
+      if (visual.iterate !== undefined) usesIterate = true;
+      const path = `${basePath}[${i}]`;
+      const type = String(visual.type ?? "").toUpperCase();
+      let slotJson = "";
+      try {
+        slotJson = JSON.stringify(visual) ?? "";
+      } catch {
+        slotJson = "";
+      }
+      const usesVariables = extractVariableRefs(slotJson);
+      const track =
+        typeof visual.track === "number" && Number.isFinite(visual.track)
+          ? visual.track
+          : null;
+      const dim = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) ? v : null;
+      if (type === "TEXT") {
+        const style = recordOf(visual.style) ? visual.style : {};
+        const text =
+          typeof visual.html === "string"
+            ? stripHtmlToText(visual.html)
+            : typeof visual.text === "string"
+              ? visual.text
+              : "";
+        textSlots.push({
+          path,
+          sceneIndex,
+          track,
+          text,
+          fontFamily:
+            typeof style.fontFamily === "string" ? style.fontFamily : null,
+          fontSize:
+            typeof style.fontSize === "string" ||
+            typeof style.fontSize === "number"
+              ? style.fontSize
+              : null,
+          position:
+            typeof visual.position === "string" ? visual.position : null,
+          width: dim(visual.width),
+          height: dim(visual.height),
+          usesVariables,
+        });
+      } else if (type === "IMAGE" || type === "VIDEO" || type === "GIF") {
+        mediaSlots.push({
+          path,
+          sceneIndex,
+          track,
+          type,
+          src: typeof visual.src === "string" ? visual.src : "",
+          width: dim(visual.width),
+          height: dim(visual.height),
+          resize: typeof visual.resize === "string" ? visual.resize : null,
+          usesVariables,
+        });
+      } else if (type === "SVG") {
+        svgCount += 1;
+      }
+    });
+  };
+
+  walkVisuals(source.visuals, "visuals", null);
+  if (Array.isArray(source.scenes)) {
+    source.scenes.forEach((scene, i) => {
+      if (!recordOf(scene)) return;
+      if (scene.condition !== undefined) usesCondition = true;
+      if (scene.iterate !== undefined) usesIterate = true;
+      scenes.push({
+        index: i,
+        duration:
+          typeof scene.duration === "number" && Number.isFinite(scene.duration)
+            ? scene.duration
+            : null,
+        transition:
+          typeof scene.transition === "string" ? scene.transition : null,
+        visualCount: Array.isArray(scene.visuals) ? scene.visuals.length : 0,
+      });
+      walkVisuals(scene.visuals, `scenes[${i}].visuals`, i);
+    });
+  }
+
+  const audios: AdaptationMap["audios"] = [];
+  if (Array.isArray(source.audios)) {
+    source.audios.forEach((audio, i) => {
+      if (recordOf(audio) && typeof audio.src === "string") {
+        audios.push({ path: `audios[${i}]`, src: audio.src });
+      }
+    });
+  }
+
+  const declaredNames = new Set(variables.map((v) => v.name));
+  const undeclaredRefs = extractVariableRefs(wholeJson).filter(
+    (name) => !declaredNames.has(name),
+  );
+  const usesVariables = variables.length > 0 || undeclaredRefs.length > 0;
+
+  return {
+    projectType,
+    output,
+    variables,
+    undeclaredRefs,
+    templateFeatures: { usesVariables, usesCondition, usesIterate },
+    // Undeclared refs alone do NOT pick the template route: they have no
+    // defaults to render with — the client must replace them inline.
+    recommendedWorkflow:
+      variables.length > 0 || usesCondition || usesIterate
+        ? "template-render"
+        : "direct-adapt",
+    sceneCount: scenes.length,
+    scenes,
+    textSlots,
+    mediaSlots,
+    svgCount,
+    audios,
+    hasSubtitle: recordOf(source.subtitle),
+    fonts: [
+      ...new Set(
+        textSlots
+          .map((slot) => slot.fontFamily)
+          .filter((font): font is string => !!font),
+      ),
+    ],
   };
 }
 
@@ -2086,6 +2784,20 @@ function checkUrlField(ctx: Ctx, field: string, v: unknown): boolean {
   return true;
 }
 
+/**
+ * Template-engine fields (condition/iterate/iterateAs + scoped variables)
+ * resolve during TEMPLATE rendering and are stripped by the engine before
+ * validation; they are inert on direct payload renders. Recognized here so
+ * validation warns accurately and repair never destroys template logic by
+ * "cleaning" them away.
+ */
+const TEMPLATE_ONLY_KEYS = new Set([
+  "condition",
+  "iterate",
+  "iterateAs",
+  "variables",
+]);
+
 function checkUnknownKeys(
   ctx: Ctx,
   field: string,
@@ -2093,13 +2805,20 @@ function checkUnknownKeys(
   allowed: Set<string>,
 ) {
   for (const k of Object.keys(obj)) {
-    if (!allowed.has(k)) {
+    if (allowed.has(k)) continue;
+    if (TEMPLATE_ONLY_KEYS.has(k)) {
       warn(
         ctx,
         `${field}.${k}`,
-        `Unknown field "${k}" — the backend strips it silently and the renderer never sees it`,
+        `"${k}" is a template-only field — it resolves when the project is rendered as a TEMPLATE (create_template + variables) and is inert on a direct payload render`,
       );
+      continue;
     }
+    warn(
+      ctx,
+      `${field}.${k}`,
+      `Unknown field "${k}" — the backend strips it silently and the renderer never sees it`,
+    );
   }
 }
 
@@ -4352,9 +5071,11 @@ export function repairProject(
           });
         }
       }
-      // strip unknown keys (backend would strip them anyway)
+      // strip unknown keys (backend would strip them anyway) — but KEEP
+      // template-only fields (condition/iterate/...): they are the design
+      // logic of template-shaped payloads and resolve at template render.
       for (const k of Object.keys(v)) {
-        if (!VISUAL_KEYS[t].includes(k)) {
+        if (!VISUAL_KEYS[t].includes(k) && !TEMPLATE_ONLY_KEYS.has(k)) {
           delete v[k];
           changes.push({
             field: `${field}.${k}`,
@@ -4420,11 +5141,24 @@ export function repairProject(
     });
   }
 
-  // audios
-  if (Array.isArray(p.audios)) {
-    p.audios.forEach((a: unknown, i: number) => {
+  // audios (top-level and per-scene)
+  const repairAudioArray = (audios: unknown, prefix: string) => {
+    if (!Array.isArray(audios)) return;
+    audios.forEach((a: unknown, i: number) => {
       if (!isObj(a)) return;
-      const field = `audios[${i}]`;
+      const field = `${prefix}[${i}]`;
+      // Editor-authored payloads carry fields (e.g. track) the backend
+      // schema rejects with unknown(false) — strip them like visual keys,
+      // keeping template-only fields intact.
+      for (const k of Object.keys(a)) {
+        if (!AUDIO_KEYS.has(k) && !TEMPLATE_ONLY_KEYS.has(k)) {
+          delete a[k];
+          changes.push({
+            field: `${field}.${k}`,
+            change: `removed unknown field "${k}"`,
+          });
+        }
+      }
       clampField(a, "volume", `${field}.volume`, 0, 1);
       clampField(a, "speed", `${field}.speed`, 0.1, 10);
       if (isNum(a.enter) && isNum(a.exit) && a.exit < a.enter) {
@@ -4439,6 +5173,12 @@ export function repairProject(
         [a.audioBegin, a.audioEnd] = [a.audioEnd, a.audioBegin];
         changes.push({ field, change: "swapped reversed audioBegin/audioEnd" });
       }
+    });
+  };
+  repairAudioArray(p.audios, "audios");
+  if (Array.isArray(p.scenes)) {
+    p.scenes.forEach((s: unknown, i: number) => {
+      if (isObj(s)) repairAudioArray(s.audios, `scenes[${i}].audios`);
     });
   }
 

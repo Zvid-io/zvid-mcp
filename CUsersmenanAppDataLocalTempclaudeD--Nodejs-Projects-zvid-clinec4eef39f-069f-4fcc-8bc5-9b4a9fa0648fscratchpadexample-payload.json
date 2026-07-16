@@ -1,0 +1,448 @@
+zvid-mcp 0.1.0 ready (API: http://localhost:4000)
+{
+  "item": {
+    "kind": "examples",
+    "slug": "edu-micro-lesson",
+    "title": "Micro-Lesson",
+    "description": "45-second lesson: title card, three timed teaching points, takeaway scene.",
+    "meta": {
+      "pack": "edtech",
+      "scenes": 2,
+      "preview": "https://cdn.zvid.io/library/examples/previews/edu-micro-lesson.1d57162361be.mp4",
+      "duration": 16.65,
+      "features": [
+        "variables"
+      ],
+      "hasScenes": true,
+      "thumbnail": "https://cdn.zvid.io/library/examples/previews/edu-micro-lesson.1d57162361be.jpg",
+      "resolution": "instagram-reel",
+      "previewHeight": 540
+    },
+    "version": 2,
+    "sortOrder": 70,
+    "status": "active",
+    "contentUrl": "https://cdn.zvid.io/library/examples/edu-micro-lesson.f37112f0ab05.json",
+    "contentHash": "f37112f0ab0531c5b6ef243d05c46e20bf91759fa07451ca08e5d2750580c7e7",
+    "createdAt": "2026-07-05T14:41:11.000Z",
+    "updatedAt": "2026-07-10T13:15:53.000Z"
+  },
+  "payload": {
+    "name": "edu-micro-lesson",
+    "resolution": "instagram-reel",
+    "frameRate": 30,
+    "backgroundColor": "#1E2622",
+    "outputFormat": "mp4",
+    "variables": {
+      "courseName": "Money Basics",
+      "lessonNumber": "Lesson 12",
+      "lessonTitle": "The 50/30/20 rule in 45 seconds",
+      "instructorName": "Prof. Ada Lindqvist",
+      "point1": "50% of income covers needs: rent, food, transport, bills.",
+      "point2": "30% is for wants — guilt-free, because it's budgeted.",
+      "point3": "20% goes to future-you: savings, investing, debt payoff.",
+      "takeaway": "Three buckets. One rule. Zero spreadsheets to start.",
+      "ctaText": "Next lesson drops Thursday",
+      "bgImage": "https://images.pexels.com/photos/8085253/pexels-photo-8085253.jpeg?auto=compress&cs=tinysrgb&w=1620",
+      "musicUrl": "https://cdn.pixabay.com/audio/2025/04/21/audio_ed6f0ed574.mp3"
+    },
+    "scenes": [
+      {
+        "id": "lesson",
+        "duration": 12.6,
+        "backgroundColor": "#1E2622",
+        "transition": "smoothup",
+        "transitionId": "takeaway",
+        "transitionDuration": 0.55,
+        "visuals": [
+          {
+            "type": "IMAGE",
+            "src": "{{bgImage}}",
+            "width": 1080,
+            "height": 1920,
+            "position": "center-center",
+            "resize": "cover",
+            "opacity": 0.25,
+            "track": 0,
+            "enterBegin": 0,
+            "exitEnd": 12.6
+          },
+          {
+            "type": "SVG",
+            "width": 1080,
+            "height": 1920,
+            "track": 1,
+            "enterBegin": 0,
+            "exitEnd": 12.6,
+            "svg": "<svg width='1080' height='1920' viewBox='0 0 1080 1920' xmlns='http://www.w3.org/2000/svg'><rect width='1080' height='1920' fill='rgba(30,38,34,0.65)'/><rect x='80' y='150' width='920' height='250' rx='28' fill='rgba(30,38,34,0.85)' stroke='rgba(255,209,102,0.45)' stroke-width='1.5'/><path d='M80 1690 H1000' stroke='rgba(255,209,102,0.35)' stroke-width='1.5'/></svg>"
+          },
+          {
+            "type": "TEXT",
+            "x": 140,
+            "y": 200,
+            "width": 810,
+            "anchor": "top-left",
+            "track": 3,
+            "enterBegin": 0.2,
+            "enterEnd": 0.65,
+            "enterAnimation": "smoothdown",
+            "exitEnd": 12.6,
+            "style": {
+              "fontFamily": "Fraunces"
+            },
+            "html": "<div style='color:#FFD166; font-size:24px; font-weight:700; letter-spacing:4px; font-family:Manrope, sans-serif;'>{{courseName}} · {{lessonNumber}}</div><div style='margin-top:12px; color:#F4F1E8; font-size:52px; line-height:1.1; font-weight:700;'>{{lessonTitle}}</div>"
+          },
+          {
+            "type": "TEXT",
+            "x": 100,
+            "y": 560,
+            "width": 880,
+            "anchor": "top-left",
+            "track": 4,
+            "enterBegin": 1,
+            "enterEnd": 1.4,
+            "enterAnimation": "smoothleft",
+            "exitEnd": 12.6,
+            "style": {
+              "fontFamily": "Manrope"
+            },
+            "html": "<div style='display:flex;'><div style='width:120px; color:#FFD166; font-size:64px; font-weight:800;'>50</div><div style='flex:1; color:#F4F1E8; font-size:32px; line-height:1.5; font-weight:600; padding-left:20px; border-left:3px solid rgba(255,209,102,0.6);'>{{point1}}</div></div>"
+          },
+          {
+            "type": "TEXT",
+            "x": 100,
+            "y": 880,
+            "width": 880,
+            "anchor": "top-left",
+            "track": 5,
+            "enterBegin": 4.4,
+            "enterEnd": 4.8,
+            "enterAnimation": "smoothleft",
+            "exitEnd": 12.6,
+            "style": {
+              "fontFamily": "Manrope"
+            },
+            "html": "<div style='display:flex;'><div style='width:120px; color:#8FD6A0; font-size:64px; font-weight:800;'>30</div><div style='flex:1; color:#F4F1E8; font-size:32px; line-height:1.5; font-weight:600; padding-left:20px; border-left:3px solid rgba(143,214,160,0.6);'>{{point2}}</div></div>"
+          },
+          {
+            "type": "TEXT",
+            "x": 100,
+            "y": 1200,
+            "width": 880,
+            "anchor": "top-left",
+            "track": 6,
+            "enterBegin": 7.8,
+            "enterEnd": 8.2,
+            "enterAnimation": "smoothleft",
+            "exitEnd": 12.6,
+            "style": {
+              "fontFamily": "Manrope"
+            },
+            "html": "<div style='display:flex;'><div style='width:120px; color:#82C0F4; font-size:64px; font-weight:800;'>20</div><div style='flex:1; color:#F4F1E8; font-size:32px; line-height:1.5; font-weight:600; padding-left:20px; border-left:3px solid rgba(130,192,244,0.6);'>{{point3}}</div></div>"
+          },
+          {
+            "type": "TEXT",
+            "x": 100,
+            "y": 1730,
+            "anchor": "top-left",
+            "track": 2,
+            "enterBegin": 0,
+            "exitEnd": 12.6,
+            "style": {
+              "fontFamily": "Manrope"
+            },
+            "html": "<div style='color:#94A399; font-size:24px; font-weight:600;'>👩‍🏫 {{instructorName}}</div>"
+          }
+        ]
+      },
+      {
+        "id": "takeaway",
+        "duration": 4.6,
+        "backgroundColor": "#1E2622",
+        "visuals": [
+          {
+            "type": "SVG",
+            "width": 1080,
+            "height": 1920,
+            "track": 0,
+            "enterBegin": 0,
+            "exitEnd": 4.6,
+            "svg": "<svg width='1080' height='1920' viewBox='0 0 1080 1920' xmlns='http://www.w3.org/2000/svg'><defs><radialGradient id='emlEnd' cx='0.5' cy='0.38' r='0.9'><stop offset='0' stop-color='#2C3A32'/><stop offset='1' stop-color='#1E2622'/></radialGradient></defs><rect width='1080' height='1920' fill='url(#emlEnd)'/><path d='M480 560 C480 500 540 470 540 470 C540 470 600 500 600 560 C600 610 560 630 555 665 L525 665 C520 630 480 610 480 560 Z' fill='none' stroke='#FFD166' stroke-width='7'/><path d='M523 700 H557 M528 730 H552' stroke='#FFD166' stroke-width='7' stroke-linecap='round'/></svg>"
+          },
+          {
+            "type": "TEXT",
+            "x": 540,
+            "y": 850,
+            "width": 880,
+            "anchor": "top-center",
+            "track": 1,
+            "enterBegin": 0.3,
+            "enterEnd": 0.75,
+            "enterAnimation": "smoothup",
+            "exitEnd": 4.6,
+            "style": {
+              "fontFamily": "Fraunces"
+            },
+            "html": "<div style='text-align:center; color:#FFD166; font-size:26px; font-weight:700; letter-spacing:5px; font-family:Manrope, sans-serif;'>REMEMBER THIS</div><div style='margin-top:20px; text-align:center; color:#F4F1E8; font-size:56px; line-height:1.25; font-weight:700;'>{{takeaway}}</div>"
+          },
+          {
+            "type": "TEXT",
+            "x": 540,
+            "y": 1310,
+            "anchor": "top-center",
+            "track": 2,
+            "enterBegin": 0.9,
+            "enterEnd": 1.3,
+            "enterAnimation": "circleopen",
+            "exitEnd": 4.6,
+            "style": {
+              "fontFamily": "Manrope"
+            },
+            "html": "<div style='display:inline-block; background:#FFD166; color:#1E2622; border-radius:999px; padding:24px 60px; font-size:32px; font-weight:800;'>{{ctaText}}</div><div style='margin-top:16px; text-align:center; color:#94A399; font-size:23px; font-weight:600; letter-spacing:3px;'>{{courseName}} · {{instructorName}}</div>"
+          }
+        ]
+      }
+    ],
+    "audios": [
+      {
+        "src": "{{musicUrl}}",
+        "volume": 0.14,
+        "track": 0
+      }
+    ]
+  },
+  "adaptationMap": {
+    "projectType": "video",
+    "output": {
+      "name": "edu-micro-lesson",
+      "resolution": "instagram-reel",
+      "outputFormat": "mp4",
+      "frameRate": 30,
+      "backgroundColor": "#1E2622"
+    },
+    "variables": [
+      {
+        "name": "courseName",
+        "defaultValue": "Money Basics",
+        "references": 2
+      },
+      {
+        "name": "lessonNumber",
+        "defaultValue": "Lesson 12",
+        "references": 1
+      },
+      {
+        "name": "lessonTitle",
+        "defaultValue": "The 50/30/20 rule in 45 seconds",
+        "references": 1
+      },
+      {
+        "name": "instructorName",
+        "defaultValue": "Prof. Ada Lindqvist",
+        "references": 2
+      },
+      {
+        "name": "point1",
+        "defaultValue": "50% of income covers needs: rent, food, transport, bills.",
+        "references": 1
+      },
+      {
+        "name": "point2",
+        "defaultValue": "30% is for wants — guilt-free, because it's budgeted.",
+        "references": 1
+      },
+      {
+        "name": "point3",
+        "defaultValue": "20% goes to future-you: savings, investing, debt payoff.",
+        "references": 1
+      },
+      {
+        "name": "takeaway",
+        "defaultValue": "Three buckets. One rule. Zero spreadsheets to start.",
+        "references": 1
+      },
+      {
+        "name": "ctaText",
+        "defaultValue": "Next lesson drops Thursday",
+        "references": 1
+      },
+      {
+        "name": "bgImage",
+        "defaultValue": "https://images.pexels.com/photos/8085253/pexels-photo-8085253.jpeg?auto=compress&cs=tinysrgb&w=1620",
+        "references": 1
+      },
+      {
+        "name": "musicUrl",
+        "defaultValue": "https://cdn.pixabay.com/audio/2025/04/21/audio_ed6f0ed574.mp3",
+        "references": 1
+      }
+    ],
+    "undeclaredRefs": [],
+    "templateFeatures": {
+      "usesVariables": true,
+      "usesCondition": false,
+      "usesIterate": false
+    },
+    "recommendedWorkflow": "template-render",
+    "sceneCount": 2,
+    "scenes": [
+      {
+        "index": 0,
+        "duration": 12.6,
+        "transition": "smoothup",
+        "visualCount": 7
+      },
+      {
+        "index": 1,
+        "duration": 4.6,
+        "transition": null,
+        "visualCount": 3
+      }
+    ],
+    "textSlots": [
+      {
+        "path": "scenes[0].visuals[2]",
+        "sceneIndex": 0,
+        "track": 3,
+        "text": "{{courseName}} · {{lessonNumber}} {{lessonTitle}}",
+        "fontFamily": "Fraunces",
+        "fontSize": null,
+        "position": null,
+        "width": 810,
+        "height": null,
+        "usesVariables": [
+          "courseName",
+          "lessonNumber",
+          "lessonTitle"
+        ]
+      },
+      {
+        "path": "scenes[0].visuals[3]",
+        "sceneIndex": 0,
+        "track": 4,
+        "text": "50 {{point1}}",
+        "fontFamily": "Manrope",
+        "fontSize": null,
+        "position": null,
+        "width": 880,
+        "height": null,
+        "usesVariables": [
+          "point1"
+        ]
+      },
+      {
+        "path": "scenes[0].visuals[4]",
+        "sceneIndex": 0,
+        "track": 5,
+        "text": "30 {{point2}}",
+        "fontFamily": "Manrope",
+        "fontSize": null,
+        "position": null,
+        "width": 880,
+        "height": null,
+        "usesVariables": [
+          "point2"
+        ]
+      },
+      {
+        "path": "scenes[0].visuals[5]",
+        "sceneIndex": 0,
+        "track": 6,
+        "text": "20 {{point3}}",
+        "fontFamily": "Manrope",
+        "fontSize": null,
+        "position": null,
+        "width": 880,
+        "height": null,
+        "usesVariables": [
+          "point3"
+        ]
+      },
+      {
+        "path": "scenes[0].visuals[6]",
+        "sceneIndex": 0,
+        "track": 2,
+        "text": "👩‍🏫 {{instructorName}}",
+        "fontFamily": "Manrope",
+        "fontSize": null,
+        "position": null,
+        "width": null,
+        "height": null,
+        "usesVariables": [
+          "instructorName"
+        ]
+      },
+      {
+        "path": "scenes[1].visuals[1]",
+        "sceneIndex": 1,
+        "track": 1,
+        "text": "REMEMBER THIS {{takeaway}}",
+        "fontFamily": "Fraunces",
+        "fontSize": null,
+        "position": null,
+        "width": 880,
+        "height": null,
+        "usesVariables": [
+          "takeaway"
+        ]
+      },
+      {
+        "path": "scenes[1].visuals[2]",
+        "sceneIndex": 1,
+        "track": 2,
+        "text": "{{ctaText}} {{courseName}} · {{instructorName}}",
+        "fontFamily": "Manrope",
+        "fontSize": null,
+        "position": null,
+        "width": null,
+        "height": null,
+        "usesVariables": [
+          "ctaText",
+          "courseName",
+          "instructorName"
+        ]
+      }
+    ],
+    "mediaSlots": [
+      {
+        "path": "scenes[0].visuals[0]",
+        "sceneIndex": 0,
+        "track": 0,
+        "type": "IMAGE",
+        "src": "{{bgImage}}",
+        "width": 1080,
+        "height": 1920,
+        "resize": "cover",
+        "usesVariables": [
+          "bgImage"
+        ]
+      }
+    ],
+    "svgCount": 2,
+    "audios": [
+      {
+        "path": "audios[0]",
+        "src": "{{musicUrl}}"
+      }
+    ],
+    "hasSubtitle": false,
+    "fonts": [
+      "Fraunces",
+      "Manrope"
+    ]
+  },
+  "adaptationContract": [
+    "KEEP the example's layout skeleton — scene structure, element positions, sizes, animations, timings and transitions. That skeleton IS the premium design; rebuilding it from scratch is how quality is lost.",
+    "If the example defines `variables`, adapt through them: change variable VALUES only (copy, media URLs, colors, labels) and leave `{{placeholder}}` references untouched. Variables are inert on a direct payload render — save the payload with create_template, dry-run with preview_template, then render with create_render { template, variables }.",
+    "If any element uses `condition` or `iterate`, the template route is REQUIRED — those only resolve server-side when rendering a template.",
+    "Rewrite topic-specific copy at roughly the same length (±30%) so boxes, wrapping and type scale still fit; never shrink fontSize or widen boxes to squeeze in longer copy.",
+    "Swap media via search_stock_media keeping each slot's media type (image stays image, video stays video); use the full-quality src URL — never the small preview URL — with natural size >= the slot's rendered size.",
+    "Apply brand tokens globally, not per element: accent/background colors and at most 1-2 font families, changed consistently everywhere.",
+    "Do not add or remove scenes or visuals unless the brief requires it; when you must, clone an existing scene of the same role and re-balance durations.",
+    "Finish with validate_project_json (remote: true) on the final payload — or preview_template for template renders — and fix every error AND layout warning before rendering."
+  ],
+  "validationNote": "This payload uses template features (variables/condition/iterate) that only resolve when rendered as a template — do not validate or render it as a raw payload.",
+  "nextSteps": [
+    "Adapt through the `variables` defaults (copy, media URLs, colors); keep {{placeholder}} references and layout untouched.",
+    "create_template with the payload, preview_template with your variables (free dry run), then create_render { template, variables }."
+  ]
+}
