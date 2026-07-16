@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.zvid/mcp",
+  "title": "Zvid",
+  "description": "Official Zvid MCP server — render videos & images from JSON and manage templates, projects, webhooks and credits, from Claude, Cursor, Codex, n8n or any Model Context Protocol client.",
+  "version": "0.1.0",
+  "websiteUrl": "https://zvid.io",
+  "repository": {
+    "url": "https://github.com/Zvid-io/zvid-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "zvid-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ZVID_API_KEY",
+          "description": "Zvid API key (format zvid_…). Create one at https://app.zvid.io.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "ZVID_API_URL",
+          "description": "Zvid orchestrator base URL. Defaults to https://api.zvid.io.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "https://api.zvid.io"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.zvid.io/mcp"
+    }
+  ]
+}

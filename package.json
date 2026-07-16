@@ -1,8 +1,26 @@
 {
   "name": "zvid-mcp",
   "version": "0.1.0",
-  "description": "Official Zvid MCP server — create video/image renders, manage templates, projects, webhooks and credits from any MCP client.",
+  "description": "Official Zvid MCP server — render videos & images from JSON and manage templates, projects, webhooks and credits, from Claude, Cursor, Codex, n8n or any Model Context Protocol client.",
+  "mcpName": "io.zvid/mcp",
   "license": "MIT",
+  "homepage": "https://zvid.io",
+  "author": {
+    "name": "Zvid",
+    "email": "support@zvid.io",
+    "url": "https://zvid.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zvid-io/zvid-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zvid-io/zvid-mcp/issues",
+    "email": "help@zvid.io"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -26,10 +44,31 @@
   "keywords": [
     "zvid",
     "mcp",
+    "mcp-server",
     "modelcontextprotocol",
+    "model-context-protocol",
+    "ai",
+    "ai-agent",
+    "llm",
+    "claude",
+    "claude-code",
+    "cursor",
+    "codex",
     "video",
-    "rendering",
-    "json2video"
+    "video-generation",
+    "video-rendering",
+    "image-rendering",
+    "programmatic-video",
+    "shotstack",
+    "creatomate",
+    "plainly",
+    "json-to-video",
+    "json2video",
+    "video-api",
+    "templates",
+    "automation",
+    "creative-automation",
+    "n8n"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

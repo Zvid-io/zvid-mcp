@@ -160,4 +160,16 @@ ZVID_API_KEY=zvid_… ZVID_API_URL=http://localhost:4000 node scripts/e2e-local.
 
 ## Publishing (manual)
 
-Not published yet. To publish: bump `version` in `package.json`, then `npm publish --access public` from `mcp/`. The `prepublishOnly` hook builds `dist/`.
+Not published yet.
+
+**npm.** Bump `version` in `package.json`, then `npm publish` from `mcp/` (public access is set via `publishConfig`). The `prepublishOnly` hook builds `dist/`.
+
+**Official MCP Registry** (`registry.modelcontextprotocol.io`) — lists the server for discovery in MCP-aware clients. It reads `server.json`; ownership of the `io.zvid/*` namespace is proven with a DNS TXT record on `zvid.io` (or switch the `mcpName`/`server.json` `name` to `io.github.Zvid-io/zvid-mcp` to verify via GitHub instead). After `npm publish`:
+
+```bash
+# one-time: install the publisher CLI, then log in (DNS or GitHub)
+mcp-publisher login dns --domain zvid.io      # or: mcp-publisher login github
+mcp-publisher publish                          # reads ./server.json
+```
+
+**Keep versions in sync** on every release — a mismatch blocks the registry publish. Update all three together: `package.json` `version`, `server.json` `version`, and `server.json` `packages[0].version`. The server name must match in both files: `package.json` `mcpName` == `server.json` `name`.
