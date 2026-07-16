@@ -1,5 +1,5 @@
 {
-  "name": "zvid-mcp",
+  "name": "@zvid/mcp",
   "version": "0.1.0",
   "description": "Official Zvid MCP server — render videos & images from JSON and manage templates, projects, webhooks and credits, from Claude, Cursor, Codex, n8n or any Model Context Protocol client.",
   "mcpName": "io.zvid/mcp",

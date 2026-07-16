@@ -2,7 +2,7 @@
   <img src="https://cdn.zvid.io/assets/logo.svg" alt="Zvid" width="184" />
 </p>
 
-# zvid-mcp
+# @zvid/mcp
 
 Official [Zvid](https://zvid.io) MCP server. Gives any MCP client (Claude Code, Claude Desktop, Codex CLI, Cursor, n8n, …) tools to render videos and images from JSON, manage templates, projects and webhooks, and check credits — all through the Zvid REST API.
 
@@ -47,7 +47,7 @@ HTTP transports. Configuration resolution is CLI flags, then environment, then
 `~/.zvid-mcp.json`:
 
 ```bash
-npx -y zvid-mcp --api-key zvid_your_key_here --api-url http://localhost:4000
+npx -y @zvid/mcp --api-key zvid_your_key_here --api-url http://localhost:4000
 ```
 
 | Env var        | CLI flag             | Required   | Default               | Purpose               |

@@ -19,7 +19,7 @@ test("parses --api-key and --api-url in both forms", () => {
 });
 
 test("ignores unknown arguments", () => {
-  assert.deepEqual(parseCliOptions(["-y", "zvid-mcp", "--verbose"]), {});
+  assert.deepEqual(parseCliOptions(["-y", "@zvid/mcp", "--verbose"]), {});
 });
 
 test("loadConfigFile reads the optional config file and tolerates absence", () => {

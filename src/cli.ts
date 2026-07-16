@@ -12,7 +12,7 @@
  * cache a server's env/args until an app restart — dropping a
  * ~/.zvid-mcp.json lets you fix a missing field without restarting the host:
  *
- *   npx -y zvid-mcp --api-key zvid_xxx --api-url http://localhost:4000
+ *   npx -y @zvid/mcp --api-key zvid_xxx --api-url http://localhost:4000
  */
 
 import fs from "node:fs";
