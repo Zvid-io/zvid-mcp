@@ -11,6 +11,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createRequire } from "node:module";
 import { loadConfigFile, parseCliOptions, resolveCredentials } from "./cli.js";
 import { DEFAULT_BASE_URL, ZvidClient } from "./client.js";
+import { parseToolProfile } from "./profiles.js";
 import { createZvidServer } from "./server.js";
 
 const require = createRequire(import.meta.url);
@@ -21,7 +22,11 @@ async function main() {
   const fileConfig = loadConfigFile();
   const resolved = resolveCredentials(
     cli,
-    { apiKey: process.env.ZVID_API_KEY, apiUrl: process.env.ZVID_API_URL },
+    {
+      apiKey: process.env.ZVID_API_KEY,
+      apiUrl: process.env.ZVID_API_URL,
+      profile: process.env.ZVID_MCP_PROFILE,
+    },
     fileConfig
   );
   const apiKey = resolved.apiKey;
@@ -36,9 +41,23 @@ async function main() {
   }
 
   const client = new ZvidClient({ apiKey, baseUrl });
-  const server = createZvidServer({ client, version });
+  const server = createZvidServer({
+    client,
+    version,
+    profile: parseToolProfile(resolved.profile),
+    quoteSecret: process.env.ZVID_MCP_QUOTE_SECRET,
+    maxRenderCredits: positiveNumber(
+      process.env.ZVID_MCP_MAX_RENDER_CREDITS,
+    ),
+  });
   await server.connect(new StdioServerTransport());
   console.error(`zvid-mcp ${version} ready (API: ${baseUrl})`);
+}
+
+function positiveNumber(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 main().catch((err) => {

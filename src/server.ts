@@ -18,9 +18,20 @@
  *   GET  /api/credits/balance|usage-stats    credits
  */
 
+import crypto from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import {
+  registerAgentFacade,
+  registerAgentResourcesAndPrompts,
+} from "./agentFacade.js";
 import { ZvidApiError, ZvidClient } from "./client.js";
+import {
+  DEFAULT_TOOL_PROFILE,
+  isToolEnabled,
+  parseToolProfile,
+  type ToolProfile,
+} from "./profiles.js";
 import {
   briefSubjectTerms,
   buildAdaptationMap,
@@ -53,7 +64,20 @@ import {
 export interface ServerOptions {
   client: ZvidClient;
   version?: string;
+  profile?: ToolProfile;
+  quoteSecret?: string;
+  quoteTtlSeconds?: number;
+  maxRenderCredits?: number;
+  maxBulkItems?: number;
+  now?: () => Date;
 }
+
+const PROCESS_QUOTE_SECRET =
+  process.env.ZVID_MCP_QUOTE_SECRET ?? crypto.randomBytes(32).toString("hex");
+const DEFAULT_MCP_MAX_BULK_ITEMS = positiveInteger(
+  process.env.ZVID_MCP_MAX_BULK_ITEMS,
+  25,
+);
 
 /** JSON-stringify a successful API response into MCP text content. */
 function ok(data: unknown) {
@@ -281,11 +305,13 @@ async function searchLibraryParts(
 ): Promise<Record<string, unknown>[]> {
   const unique = [...new Set(queries.map((q) => q.trim()).filter(Boolean))];
   const pages = await Promise.all(
-    unique.slice(0, 3).map((q) =>
-      client
-        .get(`/api/library/${kind}`, { q, limit: 8, offset: 0 })
-        .catch(() => null),
-    ),
+    unique
+      .slice(0, 3)
+      .map((q) =>
+        client
+          .get(`/api/library/${kind}`, { q, limit: 8, offset: 0 })
+          .catch(() => null),
+      ),
   );
   const seen = new Map<string, Record<string, unknown>>();
   for (const page of pages) {
@@ -304,6 +330,7 @@ async function searchLibraryParts(
 async function discoverLibraryCandidates(
   client: ZvidClient,
   opts: LibraryDiscoveryOptions,
+  profile: ToolProfile = "developer",
 ): Promise<LibraryDiscoveryResult> {
   const listing = (await client.get("/api/library/examples")) as {
     items?: unknown;
@@ -343,11 +370,18 @@ async function discoverLibraryCandidates(
   if (best && best.matchStrength === "strong") {
     decision = "adapt-example";
     decisionReason = `"${best.slug}" is a strong match (score ${best.score}) — adapt it with start_from_example instead of composing from scratch.`;
-    nextSteps = [
-      `start_from_example { slug: "${best.slug}" } returns the full payload, its variables, and an adaptation map.`,
-      "EASIEST premium path when it has variables: choose new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call render_from_example { slug, variables } — the server keeps the design intact.",
-      "Only edit the payload itself when variables cannot express the change; keep layout/animations/timings, then validate_project_json (remote: true) and create_render / create_image_render.",
-    ];
+    nextSteps =
+      profile === "creator"
+        ? [
+            `start_from_example { slug: "${best.slug}" } returns the full payload and adaptation map.`,
+            "Adapt the designed payload in place. If template-only variables or iteration cannot be materialized safely, choose a static candidate or assemble from library parts instead of simplifying the design.",
+            "Validate the complete static payload with validate_project_json (remote: true), fix every issue, then call create_media with the original brief and that exact payload.",
+          ]
+        : [
+            `start_from_example { slug: "${best.slug}" } returns the full payload, its variables, and an adaptation map.`,
+            "EASIEST premium path when it has variables: choose new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call render_from_example { slug, variables } — the server keeps the design intact.",
+            "Only edit the payload itself when variables cannot express the change; keep layout/animations/timings, then validate_project_json (remote: true) and create_render / create_image_render.",
+          ];
   } else {
     decision =
       best && best.matchStrength === "partial"
@@ -365,7 +399,9 @@ async function discoverLibraryCandidates(
     nextSteps = [
       "Inspect candidate thumbnails/previews before dismissing them; adapt the closest fit when its scene structure matches.",
       "Otherwise assemble the planned scenes: search_creative_library for modules and search_stock_media for topic media (full-quality src, natural size >= canvas).",
-      "Compose scene-based project JSON, validate_project_json (remote: true), fix everything, then render.",
+      profile === "creator"
+        ? "Compose scene-based project JSON, validate_project_json (remote: true), fix everything, then call create_media with the original brief and exact payload."
+        : "Compose scene-based project JSON, validate_project_json (remote: true), fix everything, then render.",
     ];
   }
 
@@ -408,7 +444,19 @@ async function discoverLibraryCandidates(
   return result;
 }
 
-const SERVER_INSTRUCTIONS = `Zvid renders project JSON into videos and images. Follow the example-first quality workflow — hand-composed layouts are the #1 cause of low-quality output:
+const READONLY_INSTRUCTIONS = `Use get_media and list_media to inspect existing work, and get_account for credits and usage. This profile cannot create, revise, or render media.`;
+
+const CREATOR_INSTRUCTIONS = `Zvid Creator uses exact, quality-first project authoring. Brief-only creative composition is disabled because weak models produce unreliable layouts. Follow this workflow:
+1. Call plan_creative_video with the brief and use its ranked libraryCandidates and decision.
+2. For "adapt-example", call start_from_example with the best slug, preserve its designed structure, layout, animations and timing, and replace only the necessary copy, media URLs and brand values. Never simplify a designed example into plain text on a background.
+3. For "adapt-or-assemble", adapt the closest candidate when its scene structure fits; otherwise use the assemble-similar route.
+4. For "assemble-similar", build the planned scenes from creative-library design templates, canvas presets and shapes plus full-quality search_stock_media URLs. Never invent media URLs.
+5. Always call validate_project_json with remote: true and fix every error and layout warning.
+6. Call create_media with the original brief and the complete validated payload. Creator rejects calls without payload, so it never improvises a design from the brief. Draft creation does not spend credits.
+7. Review the editor link. Revisions also require a complete validated replacement payload. Call render_media only after the user approves the exact quoted credits, using the returned draftId and quoteToken.
+For repeated briefs, pass recentAssetSlugs or excludeSlugs so fresh mode can rotate comparable candidates. get_example_payload's canned payloads are a last-resort scaffold, not the creative library.`;
+
+const DEVELOPER_INSTRUCTIONS = `For low-level authoring, Zvid renders project JSON into videos and images. Follow the example-first quality workflow — hand-composed layouts are the #1 cause of low-quality output:
 1. plan_creative_video with the brief. The response includes ranked libraryCandidates (matching published examples) and a decision.
 2. decision "adapt-example": start_from_example with the top slug to see its variables and adaptation map, then take the EASIEST premium path — pick new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call render_from_example { slug, variables }. The server keeps the example's designed layout/animations intact. Only edit the payload manually when variables cannot express the change — and NEVER simplify a complex example into plain text-on-background; the complexity IS the design.
 3. decision "adapt-or-assemble": inspect the candidates' thumbnails/previews; adapt the closest fit when its scene structure matches the story, otherwise treat it as assemble-similar.
@@ -417,11 +465,114 @@ const SERVER_INSTRUCTIONS = `Zvid renders project JSON into videos and images. F
 Repeated or similar briefs: pass recentAssetSlugs (plan) / excludeSlugs (find_matching_examples) with slugs you already used; fresh mode also rotates among comparable candidates automatically so identical prompts do not always yield the same design.
 For a quick "make something like X" without a full plan, call find_matching_examples (type: "image" for stills). get_example_payload's five canned payloads are a last-resort scaffold, not the library.`;
 
-export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
+function instructionsForProfile(profile: ToolProfile): string {
+  if (profile === "readonly") return READONLY_INSTRUCTIONS;
+  return profile === "automation" || profile === "developer"
+    ? `${CREATOR_INSTRUCTIONS}\n\n${DEVELOPER_INSTRUCTIONS}`
+    : CREATOR_INSTRUCTIONS;
+}
+
+function inferredAnnotations(name: string) {
+  const readOnly =
+    /^(get|list|search|find|validate|plan)_/.test(name) ||
+    ["start_from_example", "preview_template", "repair_project_json"].includes(
+      name,
+    );
+  const costly =
+    name === "render_media" ||
+    name === "render_from_example" ||
+    name === "create_render" ||
+    name === "create_image_render" ||
+    name === "create_bulk_render";
+  const openWorld =
+    name === "search_stock_media" ||
+    name === "create_webhook" ||
+    name === "test_webhook" ||
+    costly;
+  return {
+    readOnlyHint: readOnly,
+    destructiveHint: costly,
+    idempotentHint: readOnly,
+    openWorldHint: openWorld,
+  };
+}
+
+function positiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function redactSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, child]) => [
+      key,
+      /^(secret|signingSecret|webhookSecret)$/i.test(key)
+        ? "[REDACTED]"
+        : redactSecrets(child),
+    ]),
+  );
+}
+
+export function createZvidServer({
+  client,
+  version = "0.1.0",
+  profile = parseToolProfile(
+    process.env.ZVID_MCP_PROFILE,
+    DEFAULT_TOOL_PROFILE,
+  ),
+  quoteSecret = PROCESS_QUOTE_SECRET,
+  quoteTtlSeconds,
+  maxRenderCredits,
+  maxBulkItems = DEFAULT_MCP_MAX_BULK_ITEMS,
+  now,
+}: ServerOptions) {
   const server = new McpServer(
     { name: "zvid", version },
-    { instructions: SERVER_INSTRUCTIONS },
+    { instructions: instructionsForProfile(profile) },
   );
+
+  const baseRegisterTool = server.registerTool.bind(
+    server,
+  ) as McpServer["registerTool"];
+  const registerTool = ((
+    name: string,
+    config: Record<string, unknown>,
+    callback: unknown,
+  ) => {
+    const registered = baseRegisterTool(
+      name,
+      {
+        ...config,
+        annotations: {
+          ...inferredAnnotations(name),
+          ...((config.annotations as Record<string, unknown> | undefined) ??
+            {}),
+        },
+        _meta: {
+          ...((config._meta as Record<string, unknown> | undefined) ?? {}),
+          "io.zvid/tool-profile": profile,
+        },
+      } as never,
+      callback as never,
+    );
+    if (!isToolEnabled(profile, name)) registered.disable();
+    return registered;
+  }) as McpServer["registerTool"];
+
+  server.registerTool = registerTool;
+
+  registerAgentFacade({
+    server,
+    registerTool,
+    client,
+    profile,
+    quoteSecret,
+    quoteTtlSeconds,
+    maxRenderCredits,
+    now,
+  });
 
   // ---- renders ----------------------------------------------------------------
 
@@ -444,7 +595,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     {
       title: "Create image render",
       description:
-        "Queue a still-image render (PNG/JPEG) from a project JSON or an image-type template. Overrides support snapshotTime, quality and transparent. Returns a jobId to poll with get_render. For NEW creative stills, first run find_matching_examples with type: \"image\" and adapt a library example via start_from_example instead of composing from scratch.",
+        'Queue a still-image render (PNG/JPEG) from a project JSON or an image-type template. Overrides support snapshotTime, quality and transparent. Returns a jobId to poll with get_render. For NEW creative stills, first run find_matching_examples with type: "image" and adapt a library example via start_from_example instead of composing from scratch.',
       inputSchema: renderEnvelopeShape,
     },
     handler(async (args) => {
@@ -782,8 +933,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       )) as Record<string, unknown>;
 
       const searchQueries = plan.searchQueries as
-        | { designTemplates?: string[]; canvasPresets?: string[] }
-        | undefined;
+        { designTemplates?: string[]; canvasPresets?: string[] } | undefined;
       const libraryCandidates = await discoverLibraryCandidates(client, {
         brief: args.brief,
         projectType: "video",
@@ -799,7 +949,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         variationSeed:
           args.variationSeed ??
           (args.variationMode === "consistent" ? undefined : Date.now()),
-      }).catch((error: unknown) => ({
+      }, profile).catch((error: unknown) => ({
         unavailable: true,
         error: error instanceof Error ? error.message : String(error),
         note: "Creative-library lookup failed — search_creative_library manually and adapt an example before composing from scratch.",
@@ -841,7 +991,9 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
           .array(z.string().trim().min(1).max(255))
           .max(20)
           .default([])
-          .describe("Recently used example slugs to exclude (anti-repetition)."),
+          .describe(
+            "Recently used example slugs to exclude (anti-repetition).",
+          ),
         excludePremium: z
           .boolean()
           .default(false)
@@ -882,7 +1034,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         variationSeed:
           args.variationSeed ??
           (args.variationMode === "consistent" ? undefined : Date.now()),
-      }),
+      }, profile),
     ),
   );
 
@@ -1012,9 +1164,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         projectType: adaptationMap.projectType,
         render,
         preview,
-        ...(repair.changes.length
-          ? { contentRepairs: repair.changes }
-          : {}),
+        ...(repair.changes.length ? { contentRepairs: repair.changes } : {}),
         ...(unknownVariables.length
           ? {
               unknownVariables,
@@ -1064,13 +1214,14 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         ) {
           const meta = item as { title?: string; description?: string };
           const alternatives = await discoverLibraryCandidates(client, {
-            brief: `${meta.title ?? ""} ${meta.description ?? ""} ${slug.replace(/-/g, " ")}`.trim(),
+            brief:
+              `${meta.title ?? ""} ${meta.description ?? ""} ${slug.replace(/-/g, " ")}`.trim(),
             projectType: "any",
             excludeSlugs: [slug],
             excludePremium: true,
             limit: 5,
             includeParts: false,
-          }).catch(() => null);
+          }, profile).catch(() => null);
           return {
             premiumLocked: true,
             slug,
@@ -1108,21 +1259,29 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
         ...(validationNote
           ? { validationNote }
           : { validation: validateProject(payload) }),
-        nextSteps: templateRoute
-          ? [
-              "Adapt through the `variables` defaults (copy, media URLs, colors); keep {{placeholder}} references and layout untouched." +
-                (hasUndeclaredRefs
-                  ? ` Also replace the undeclared literal refs inline: ${adaptationMap.undeclaredRefs.join(", ")}.`
-                  : ""),
-              `EASIEST: render_from_example { slug: "${slug}", variables } does the template save, dry run and render in one call. Manual equivalent: create_template, preview_template, create_render { template, variables }.`,
-            ]
-          : [
-              (hasUndeclaredRefs
-                ? `Replace the literal {{placeholders}} (${adaptationMap.undeclaredRefs.join(", ")}) with real values, then edit`
-                : "Edit") +
-                " textSlots/mediaSlots in place per the adaptationContract; replace media via search_stock_media (full-quality src, natural size >= the slot).",
-              'validate_project_json (remote: true), fix every error and layout warning, then create_render (or create_image_render when adaptationMap.projectType is "image").',
-            ],
+        nextSteps:
+          profile === "creator"
+            ? [
+                templateRoute
+                  ? "This example depends on template-only features. Materialize every variable, condition and iteration into a complete static payload; if that is not safe, choose a static candidate or assemble from library parts."
+                  : "Adapt textSlots and mediaSlots in place while preserving the designed layout, animation and timing.",
+                "Use search_stock_media for full-quality media URLs, validate_project_json (remote: true), fix every issue, then call create_media with the original brief and exact payload.",
+              ]
+            : templateRoute
+              ? [
+                  "Adapt through the `variables` defaults (copy, media URLs, colors); keep {{placeholder}} references and layout untouched." +
+                    (hasUndeclaredRefs
+                      ? ` Also replace the undeclared literal refs inline: ${adaptationMap.undeclaredRefs.join(", ")}.`
+                      : ""),
+                  `EASIEST: render_from_example { slug: "${slug}", variables } does the template save, dry run and render in one call. Manual equivalent: create_template, preview_template, create_render { template, variables }.`,
+                ]
+              : [
+                  (hasUndeclaredRefs
+                    ? `Replace the literal {{placeholders}} (${adaptationMap.undeclaredRefs.join(", ")}) with real values, then edit`
+                    : "Edit") +
+                    " textSlots/mediaSlots in place per the adaptationContract; replace media via search_stock_media (full-quality src, natural size >= the slot).",
+                  'validate_project_json (remote: true), fix every error and layout warning, then create_render (or create_image_render when adaptationMap.projectType is "image").',
+                ],
       };
     }),
   );
@@ -1244,8 +1403,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     "create_bulk_render",
     {
       title: "Create bulk render",
-      description:
-        "Queue N renders from one template/payload and a list of per-item variable sets (max 500 items, plan-limited). Validation is best-effort per item: valid items queue, invalid ones are reported in itemErrors. Returns bulkId + jobIds.",
+      description: `Queue N renders from one template/payload and a list of per-item variable sets (MCP safety max ${maxBulkItems}; the API and plan may impose lower limits). Validation is best-effort per item: valid items queue, invalid ones are reported in the errors array (each entry keyed by original item index). Returns bulkId + jobIds.`,
       inputSchema: {
         kind: z
           .enum(["video", "image"])
@@ -1264,7 +1422,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
             }),
           )
           .min(1)
-          .max(500)
+          .max(maxBulkItems)
           .describe(
             "One entry per render; each item's variables merge over the base variables.",
           ),
@@ -1352,6 +1510,11 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     handler((body) => client.post("/api/templates", body)),
   );
 
+  /*
+   * Disabled from the MCP surface: update/delete mutations are too risky for
+   * weaker models to invoke. Keep the registrations here for deliberate,
+   * reviewed re-enablement later.
+   *
   server.registerTool(
     "update_template",
     {
@@ -1390,6 +1553,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       client.delete(`/api/templates/${encodeURIComponent(templateId)}`),
     ),
   );
+  */
 
   server.registerTool(
     "duplicate_template",
@@ -1453,7 +1617,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     {
       title: "Create project",
       description:
-        "Save a new editor draft project. It becomes editable at https://zvid.io/editor?project=<id>.",
+        "Save a new editor draft project. It becomes editable at https://editor.zvid.io/?project=<id>.",
       inputSchema: {
         name: z.string().min(1).max(255),
         payload: payloadSchema,
@@ -1462,6 +1626,11 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     handler((body) => client.post("/api/projects", body)),
   );
 
+  /*
+   * Disabled from the MCP surface: update/delete mutations are too risky for
+   * weaker models to invoke. Keep the registrations here for deliberate,
+   * reviewed re-enablement later.
+   *
   server.registerTool(
     "update_project",
     {
@@ -1492,6 +1661,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       client.delete(`/api/projects/${encodeURIComponent(projectId)}`),
     ),
   );
+  */
 
   // ---- webhooks -------------------------------------------------------------------
 
@@ -1511,7 +1681,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     {
       title: "Create webhook",
       description:
-        "Register a webhook endpoint for render events. The response includes the signing secret (whsec_...) shown in full only here and on get_webhook — deliveries are signed with HMAC-SHA256 in the X-Zvid-Signature header.",
+        "Register a webhook endpoint for render events. The response includes the signing secret (whsec_...) once; later get_webhook calls redact it. Deliveries are signed with HMAC-SHA256 in the X-Zvid-Signature header.",
       inputSchema: {
         url: z.string().url().describe("HTTPS endpoint to deliver events to"),
         events: z
@@ -1529,14 +1699,21 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     {
       title: "Get webhook",
       description:
-        "Get a webhook endpoint (whk_...) including its signing secret and failure state.",
+        "Get a webhook endpoint (whk_...) with its signing secret redacted, plus its status and failure state.",
       inputSchema: { webhookId: webhookIdSchema() },
     },
-    handler(({ webhookId }) =>
-      client.get(`/api/webhooks/${encodeURIComponent(webhookId)}`),
+    handler(async ({ webhookId }) =>
+      redactSecrets(
+        await client.get(`/api/webhooks/${encodeURIComponent(webhookId)}`),
+      ),
     ),
   );
 
+  /*
+   * Disabled from the MCP surface: update/delete mutations are too risky for
+   * weaker models to invoke. Keep the registrations here for deliberate,
+   * reviewed re-enablement later.
+   *
   server.registerTool(
     "update_webhook",
     {
@@ -1573,6 +1750,7 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
       client.delete(`/api/webhooks/${encodeURIComponent(webhookId)}`),
     ),
   );
+  */
 
   server.registerTool(
     "test_webhook",
@@ -1630,6 +1808,8 @@ export function createZvidServer({ client, version = "0.1.0" }: ServerOptions) {
     },
     handler((args) => client.get("/api/credits/usage-stats", args)),
   );
+
+  registerAgentResourcesAndPrompts(server, client, profile);
 
   return server;
 }

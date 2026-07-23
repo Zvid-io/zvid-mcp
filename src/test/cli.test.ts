@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { loadConfigFile, parseCliOptions, resolveCredentials } from "../cli.js";
 
-test("parses --api-key and --api-url in both forms", () => {
+test("parses --api-key, --api-url and --profile in both forms", () => {
   assert.deepEqual(parseCliOptions([]), {});
   assert.deepEqual(parseCliOptions(["--api-key", "zvid_abc"]), { apiKey: "zvid_abc" });
   assert.deepEqual(parseCliOptions(["--api-key=zvid_abc"]), { apiKey: "zvid_abc" });
@@ -15,6 +15,12 @@ test("parses --api-key and --api-url in both forms", () => {
   );
   assert.deepEqual(parseCliOptions(["--api-url=http://localhost:4000"]), {
     apiUrl: "http://localhost:4000",
+  });
+  assert.deepEqual(parseCliOptions(["--profile", "advanced"]), {
+    profile: "advanced",
+  });
+  assert.deepEqual(parseCliOptions(["--profile=developer"]), {
+    profile: "developer",
   });
 });
 
@@ -35,6 +41,9 @@ test("loadConfigFile reads the optional config file and tolerates absence", () =
     // partial file → only the provided field
     fs.writeFileSync(file, JSON.stringify({ apiUrl: "http://localhost:4000" }));
     assert.deepEqual(loadConfigFile(file), { apiUrl: "http://localhost:4000" });
+
+    fs.writeFileSync(file, JSON.stringify({ profile: "readonly" }));
+    assert.deepEqual(loadConfigFile(file), { profile: "readonly" });
 
     // junk file → empty options, no throw
     fs.writeFileSync(file, "not json");
@@ -71,4 +80,23 @@ test("resolveCredentials: flags > env > file, unless the file sets override", ()
     apiKey: "zvid_env",
     apiUrl: "http://file",
   });
+});
+
+test("resolveCredentials applies the same precedence to tool profiles", () => {
+  assert.deepEqual(
+    resolveCredentials(
+      { profile: "developer" },
+      { apiKey: "zvid_env", profile: "advanced" },
+      { profile: "readonly" },
+    ),
+    { apiKey: "zvid_env", apiUrl: undefined, profile: "developer" },
+  );
+  assert.deepEqual(
+    resolveCredentials(
+      {},
+      { apiKey: "zvid_env", profile: "advanced" },
+      { profile: "readonly", override: true },
+    ),
+    { apiKey: "zvid_env", apiUrl: undefined, profile: "readonly" },
+  );
 });

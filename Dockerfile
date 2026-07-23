@@ -11,7 +11,10 @@ RUN npm run build
 FROM node:22-alpine
 
 ENV NODE_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    ZVID_MCP_PROFILE=creator \
+    ZVID_MCP_MAX_RENDER_CREDITS=100 \
+    ZVID_MCP_MAX_BULK_ITEMS=25
 
 WORKDIR /app
 COPY package.json package-lock.json ./

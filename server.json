@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.zvid/mcp",
   "title": "Zvid",
-  "description": "Zvid: render videos & images from JSON; manage templates, projects, webhooks & credits.",
+  "description": "Quality-first Zvid authoring with planning, designed examples, validation, approval-aware renders, and opt-in automation profiles.",
   "version": "0.1.0",
   "websiteUrl": "https://zvid.io",
   "repository": {
@@ -32,6 +32,27 @@
           "isRequired": false,
           "isSecret": false,
           "default": "https://api.zvid.io"
+        },
+        {
+          "name": "ZVID_MCP_PROFILE",
+          "description": "Tool profile: readonly, creator (default), automation, or developer.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "creator"
+        },
+        {
+          "name": "ZVID_MCP_MAX_RENDER_CREDITS",
+          "description": "Maximum credits one render_media call may spend. Defaults to 30.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "30"
+        },
+        {
+          "name": "ZVID_MCP_MAX_BULK_ITEMS",
+          "description": "Maximum items accepted by create_bulk_render in automation/developer profiles. Defaults to 25.",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "25"
         }
       ]
     }

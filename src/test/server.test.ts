@@ -4,8 +4,15 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ZvidClient } from "../client.js";
 import { createZvidServer } from "../server.js";
+import type { ToolProfile } from "../profiles.js";
 
 const EXPECTED_TOOLS = [
+  "create_media",
+  "revise_media",
+  "render_media",
+  "get_media",
+  "list_media",
+  "get_account",
   "create_render",
   "create_image_render",
   "get_project_schema",
@@ -30,33 +37,43 @@ const EXPECTED_TOOLS = [
   "list_templates",
   "get_template",
   "create_template",
-  "update_template",
-  "delete_template",
   "duplicate_template",
   "preview_template",
   "list_projects",
   "get_project",
   "create_project",
-  "update_project",
-  "delete_project",
   "list_webhooks",
   "create_webhook",
   "get_webhook",
-  "update_webhook",
-  "delete_webhook",
   "test_webhook",
   "list_webhook_deliveries",
   "get_credits",
   "get_usage_stats",
 ];
 
-async function connectedClient(fetchImpl: typeof fetch) {
+const DISABLED_MUTATION_TOOLS = [
+  "update_template",
+  "delete_template",
+  "update_project",
+  "delete_project",
+  "update_webhook",
+  "delete_webhook",
+];
+
+async function connectedClient(
+  fetchImpl: typeof fetch,
+  profile: ToolProfile = "developer",
+) {
   const zvid = new ZvidClient({
     apiKey: "zvid_test",
     baseUrl: "http://localhost:4000",
     fetchImpl,
   });
-  const server = createZvidServer({ client: zvid });
+  const server = createZvidServer({
+    client: zvid,
+    profile,
+    quoteSecret: "server-test-secret",
+  });
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test", version: "0.0.0" });
@@ -72,6 +89,84 @@ test("lists all Zvid tools", async () => {
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, [...EXPECTED_TOOLS].sort());
+  assert.deepEqual(
+    names.filter((name) => DISABLED_MUTATION_TOOLS.includes(name)),
+    [],
+    "update/delete tools must remain hidden from MCP clients",
+  );
+});
+
+test("creator profile exposes quality authoring and requires exact payloads", async () => {
+  const client = await connectedClient(fetch, "creator");
+  const { tools } = await client.listTools();
+  const names = tools.map((tool) => tool.name);
+  for (const name of [
+    "plan_creative_video",
+    "find_matching_examples",
+    "start_from_example",
+    "search_creative_library",
+    "search_stock_media",
+    "validate_project_json",
+    "create_project",
+    "create_template",
+    "create_media",
+    "render_media",
+  ]) {
+    assert.ok(names.includes(name), name);
+  }
+  for (const name of [
+    "create_render",
+    "create_image_render",
+    "render_from_example",
+    "create_bulk_render",
+    "create_webhook",
+  ]) {
+    assert.equal(names.includes(name), false, name);
+  }
+  const render = tools.find((tool) => tool.name === "render_media");
+  assert.equal(render?.annotations?.readOnlyHint, false);
+  assert.equal(render?.annotations?.destructiveHint, true);
+  const account = tools.find((tool) => tool.name === "get_account");
+  assert.equal(account?.annotations?.readOnlyHint, true);
+  const create = tools.find((tool) => tool.name === "create_media");
+  assert.ok(create?.inputSchema.required?.includes("brief"));
+  assert.ok(create?.inputSchema.required?.includes("payload"));
+  assert.match(
+    String((create?.inputSchema as any).properties.brief.description),
+    /Never call create_media without this value/,
+  );
+  assert.match(String(create?.description), /refuses brief-only composition/);
+  const revise = tools.find((tool) => tool.name === "revise_media");
+  assert.ok(revise?.inputSchema.required?.includes("payload"));
+});
+
+test("automation profile caps bulk calls and redacts stored webhook secrets", async () => {
+  const fetchImpl = (async () =>
+    Response.json({
+      webhook: {
+        id: "whk_00000000000000000000",
+        url: "https://hooks.example.com/zvid",
+        secret: "whsec_do_not_expose",
+        nested: { signingSecret: "whsec_nested" },
+      },
+    })) as typeof fetch;
+  const client = await connectedClient(fetchImpl, "automation");
+  const { tools } = await client.listTools();
+  const bulk = tools.find((tool) => tool.name === "create_bulk_render");
+  assert.equal(
+    (bulk?.inputSchema as any).properties.items.maxItems,
+    25,
+  );
+
+  const webhook = firstJson(
+    await client.callTool({
+      name: "get_webhook",
+      arguments: { webhookId: "whk_00000000000000000000" },
+    }),
+  );
+  assert.equal(webhook.webhook.secret, "[REDACTED]");
+  assert.equal(webhook.webhook.nested.signingSecret, "[REDACTED]");
+  assert.ok(!JSON.stringify(webhook).includes("whsec_do_not_expose"));
 });
 
 test("advertises the example-first workflow as server instructions", async () => {
@@ -126,7 +221,7 @@ test("create_render rejects payload+template together without calling the API", 
   assert.equal(result.isError, true);
 });
 
-test("template tools expose the complete CRUD workflow", async () => {
+test("template tools expose create and duplicate without risky mutations", async () => {
   const seen: Array<{ method: string; path: string; body?: unknown }> = [];
   const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -136,17 +231,13 @@ test("template tools expose the complete CRUD workflow", async () => {
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
     });
     return new Response(
-      JSON.stringify(
-        init?.method === "DELETE"
-          ? { archived: true, id: "tpl_00000000000000000000" }
-          : {
-              template: {
-                id: "tpl_00000000000000000000",
-                name: "Promo",
-                project: { duration: 5 },
-              },
-            },
-      ),
+      JSON.stringify({
+        template: {
+          id: "tpl_00000000000000000000",
+          name: "Promo",
+          project: { duration: 5 },
+        },
+      }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   }) as typeof fetch;
@@ -158,22 +249,15 @@ test("template tools expose the complete CRUD workflow", async () => {
     arguments: { name: "Promo", payload: { duration: 5 } },
   });
   await client.callTool({
-    name: "update_template",
-    arguments: { templateId, name: "Promo 2" },
-  });
-  await client.callTool({
     name: "duplicate_template",
     arguments: { templateId },
   });
-  await client.callTool({ name: "delete_template", arguments: { templateId } });
 
   assert.deepEqual(
     seen.map(({ method, path }) => `${method} ${path}`),
     [
       "POST /api/templates",
-      `PUT /api/templates/${templateId}`,
       `POST /api/templates/${templateId}/duplicate`,
-      `DELETE /api/templates/${templateId}`,
     ],
   );
   assert.deepEqual(seen[0].body, { name: "Promo", payload: { duration: 5 } });
@@ -699,6 +783,27 @@ test("find_matching_examples ranks the library and decides adapt-example", async
   );
   assert.match(body.nextSteps[0], /start_from_example/);
   assert.ok(Array.isArray(body.adaptationContract));
+});
+
+test("creator discovery routes exact payloads through create_media", async () => {
+  const client = await connectedClient(
+    routedFetch([], [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+    "creator",
+  );
+  const body = firstJson(
+    await client.callTool({
+      name: "find_matching_examples",
+      arguments: {
+        brief: "Flash sale promo video for our online shoe store",
+        type: "video",
+        aspectRatio: "9:16",
+        variationMode: "consistent",
+      },
+    }),
+  );
+  const guidance = body.nextSteps.join("\n");
+  assert.match(guidance, /create_media/);
+  assert.doesNotMatch(guidance, /render_from_example|create_render/);
 });
 
 test("find_matching_examples falls back to assemble-similar with library parts", async () => {

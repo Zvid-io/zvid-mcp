@@ -2,9 +2,10 @@
  * CLI option parsing + config-file fallback for the zvid-mcp entry point.
  *
  * Credential resolution order (first match wins per field):
- *   1. command-line flags   --api-key / --api-url
- *   2. env vars             ZVID_API_KEY / ZVID_API_URL
- *   3. config file          ~/.zvid-mcp.json  { "apiKey": "...", "apiUrl": "..." }
+ *   1. command-line flags   --api-key / --api-url / --profile
+ *   2. env vars             ZVID_API_KEY / ZVID_API_URL / ZVID_MCP_PROFILE
+ *   3. config file          ~/.zvid-mcp.json
+ *                           { "apiKey": "...", "apiUrl": "...", "profile": "creator" }
  *   4. default API URL      https://api.zvid.io
  *
  * Flags exist because some MCP hosts offer no way to set environment
@@ -12,7 +13,7 @@
  * cache a server's env/args until an app restart — dropping a
  * ~/.zvid-mcp.json lets you fix a missing field without restarting the host:
  *
- *   npx -y @zvid/mcp --api-key zvid_xxx --api-url http://localhost:4000
+ *   npx -y @zvid/mcp --api-key zvid_xxx --profile creator
  */
 
 import fs from "node:fs";
@@ -22,6 +23,7 @@ import path from "node:path";
 export interface CliOptions {
   apiKey?: string;
   apiUrl?: string;
+  profile?: string;
 }
 
 export interface FileConfig extends CliOptions {
@@ -48,6 +50,8 @@ export function loadConfigFile(filePath?: string): FileConfig {
     const opts: FileConfig = {};
     if (typeof raw.apiKey === "string" && raw.apiKey) opts.apiKey = raw.apiKey;
     if (typeof raw.apiUrl === "string" && raw.apiUrl) opts.apiUrl = raw.apiUrl;
+    if (typeof raw.profile === "string" && raw.profile)
+      opts.profile = raw.profile;
     if (raw.override === true) opts.override = true;
     return opts;
   } catch {
@@ -62,9 +66,9 @@ export function loadConfigFile(filePath?: string): FileConfig {
  */
 export function resolveCredentials(
   cli: CliOptions,
-  env: { apiKey?: string; apiUrl?: string },
+  env: { apiKey?: string; apiUrl?: string; profile?: string },
   file: FileConfig
-): { apiKey: string; apiUrl?: string } {
+): { apiKey: string; apiUrl?: string; profile?: string } {
   const first = (...vals: Array<string | undefined>) => vals.find((v) => !!v);
   const apiKey = file.override
     ? first(cli.apiKey, file.apiKey, env.apiKey)
@@ -72,7 +76,14 @@ export function resolveCredentials(
   const apiUrl = file.override
     ? first(cli.apiUrl, file.apiUrl, env.apiUrl)
     : first(cli.apiUrl, env.apiUrl, file.apiUrl);
-  return { apiKey: apiKey ?? "", apiUrl };
+  const profile = file.override
+    ? first(cli.profile, file.profile, env.profile)
+    : first(cli.profile, env.profile, file.profile);
+  return {
+    apiKey: apiKey ?? "",
+    apiUrl,
+    ...(profile ? { profile } : {}),
+  };
 }
 
 export function parseCliOptions(argv: string[]): CliOptions {
@@ -92,6 +103,11 @@ export function parseCliOptions(argv: string[]): CliOptions {
     const url = grab("--api-url");
     if (url !== undefined) {
       opts.apiUrl = url;
+      continue;
+    }
+    const profile = grab("--profile");
+    if (profile !== undefined) {
+      opts.profile = profile;
       continue;
     }
   }
