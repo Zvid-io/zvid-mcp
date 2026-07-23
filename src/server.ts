@@ -373,9 +373,9 @@ async function discoverLibraryCandidates(
     nextSteps =
       profile === "creator"
         ? [
-            `start_from_example { slug: "${best.slug}" } returns the full payload and adaptation map.`,
-            "Adapt the designed payload in place. If template-only variables or iteration cannot be materialized safely, choose a static candidate or assemble from library parts instead of simplifying the design.",
-            "Validate the complete static payload with validate_project_json (remote: true), fix every issue, then call create_media with the original brief and that exact payload.",
+            `start_from_example { slug: "${best.slug}" } returns the full payload, its variables, and an adaptation map.`,
+            `EASIEST: pick new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call create_media_from_example { slug: "${best.slug}", variables } — the server keeps the design intact and saves an approval-gated draft with a signed credit quote, spending no credits.`,
+            "Only adapt the payload manually when variables cannot express the change: validate_project_json (remote: true), fix every issue, then call create_media with the original brief and that exact payload.",
           ]
         : [
             `start_from_example { slug: "${best.slug}" } returns the full payload, its variables, and an adaptation map.`,
@@ -448,10 +448,10 @@ const READONLY_INSTRUCTIONS = `Use get_media and list_media to inspect existing 
 
 const CREATOR_INSTRUCTIONS = `Zvid Creator uses exact, quality-first project authoring. Brief-only creative composition is disabled because weak models produce unreliable layouts. Follow this workflow:
 1. Call plan_creative_video with the brief and use its ranked libraryCandidates and decision.
-2. For "adapt-example", call start_from_example with the best slug, preserve its designed structure, layout, animations and timing, and replace only the necessary copy, media URLs and brand values. Never simplify a designed example into plain text on a background.
-3. For "adapt-or-assemble", adapt the closest candidate when its scene structure fits; otherwise use the assemble-similar route.
-4. For "assemble-similar", build the planned scenes from creative-library design templates, canvas presets and shapes plus full-quality search_stock_media URLs. Never invent media URLs.
-5. Always call validate_project_json with remote: true and fix every error and layout warning.
+2. For "adapt-example", take the EASIEST premium path: call start_from_example with the best slug to see its variables, pick new variable VALUES (copy, media URLs from search_stock_media, brand colors), then call create_media_from_example { slug, variables }. The server resolves the design, saves an approval-gated draft and returns a signed credit quote without spending credits. Never simplify a designed example into plain text on a background.
+3. Only adapt the payload manually when variables cannot express the change: preserve the example's designed structure, layout, animations and timing, replace only the necessary copy, media URLs and brand values, then follow steps 5-6.
+4. For "adapt-or-assemble", adapt the closest candidate when its scene structure fits; otherwise assemble the planned scenes from creative-library design templates, canvas presets and shapes plus full-quality search_stock_media URLs. Never invent media URLs.
+5. For manually composed payloads, always call validate_project_json with remote: true and fix every error and layout warning.
 6. Call create_media with the original brief and the complete validated payload. Creator rejects calls without payload, so it never improvises a design from the brief. Draft creation does not spend credits.
 7. Review the editor link. Revisions also require a complete validated replacement payload. Call render_media only after the user approves the exact quoted credits, using the returned draftId and quoteToken.
 For repeated briefs, pass recentAssetSlugs or excludeSlugs so fresh mode can rotate comparable candidates. get_example_payload's canned payloads are a last-resort scaffold, not the creative library.`;
@@ -1263,9 +1263,9 @@ export function createZvidServer({
           profile === "creator"
             ? [
                 templateRoute
-                  ? "This example depends on template-only features. Materialize every variable, condition and iteration into a complete static payload; if that is not safe, choose a static candidate or assemble from library parts."
-                  : "Adapt textSlots and mediaSlots in place while preserving the designed layout, animation and timing.",
-                "Use search_stock_media for full-quality media URLs, validate_project_json (remote: true), fix every issue, then call create_media with the original brief and exact payload.",
+                  ? `EASIEST: pick new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call create_media_from_example { slug: "${slug}", variables } — the server resolves the template features and saves an approval-gated draft with a signed credit quote, no credits spent.`
+                  : `Adapt textSlots and mediaSlots in place while preserving the designed layout, animation and timing — or call create_media_from_example { slug: "${slug}", variables } to draft it server-side when variables cover the change.`,
+                "For manually adapted payloads: use search_stock_media for full-quality media URLs, validate_project_json (remote: true), fix every issue, then call create_media with the original brief and exact payload.",
               ]
             : templateRoute
               ? [

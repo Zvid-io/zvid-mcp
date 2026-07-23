@@ -8,6 +8,7 @@ import type { ToolProfile } from "../profiles.js";
 
 const EXPECTED_TOOLS = [
   "create_media",
+  "create_media_from_example",
   "revise_media",
   "render_media",
   "get_media",
@@ -110,6 +111,7 @@ test("creator profile exposes quality authoring and requires exact payloads", as
     "create_project",
     "create_template",
     "create_media",
+    "create_media_from_example",
     "render_media",
   ]) {
     assert.ok(names.includes(name), name);

@@ -506,6 +506,203 @@ test("brief-only creation falls back safely when the MCP client lacks sampling",
   );
 });
 
+test("create_media_from_example resolves variables server-side into a quoted draft", async () => {
+  const TEMPLATE_CONTENT = {
+    type: "image",
+    width: 1280,
+    height: 720,
+    outputFormat: "png",
+    variables: { headline: "Big Sale", img: "https://example.com/a.jpg" },
+    visuals: [
+      {
+        type: "TEXT",
+        html: "<p>{{headline}}</p>",
+        style: { fontFamily: "Inter", fontSize: "64px", color: "#ffffff" },
+        width: 800,
+        height: 200,
+        position: "center-center",
+      },
+      { type: "IMAGE", src: "{{img}}", width: 1280, height: 720 },
+    ],
+  };
+  const RESOLVED_PAYLOAD = { ...IMAGE_PAYLOAD, name: "Resolved Flash Demo" };
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  let savedDraftPayload: unknown;
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (url.pathname === "/api/library/examples/flash-demo/content") {
+      return Response.json(TEMPLATE_CONTENT);
+    }
+    if (url.pathname === "/api/library/examples/flash-demo") {
+      return Response.json({ slug: "flash-demo", title: "Flash Demo", meta: {} });
+    }
+    if (url.pathname === "/api/templates" && init?.method === "POST") {
+      return Response.json({ template: { id: "tpl_123" } }, { status: 201 });
+    }
+    if (url.pathname === "/api/templates/tpl_123/preview") {
+      return Response.json({ project: RESOLVED_PAYLOAD, stats: {} });
+    }
+    if (url.pathname === "/api/templates/tpl_123" && init?.method === "DELETE") {
+      return Response.json({ archived: true });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 4,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/projects" && init?.method === "POST") {
+      savedDraftPayload = body.payload;
+      return Response.json(
+        {
+          project: {
+            id: DRAFT_ID,
+            name: body.name,
+            payload: body.payload,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_from_example",
+      arguments: {
+        slug: "flash-demo",
+        variables: { headline: "50% off everything", typoName: "ignored" },
+        brief: "Flash sale for our summer collection",
+      },
+    }),
+  );
+
+  assert.equal(created.composition, "example-adaptation");
+  assert.equal(created.draftId, DRAFT_ID);
+  assert.equal(created.estimatedCredits, 4);
+  assert.ok(created.quoteToken);
+  assert.deepEqual(created.unknownVariables, ["typoName"]);
+  assert.deepEqual(savedDraftPayload, RESOLVED_PAYLOAD);
+  const previewCall = seen.find(
+    (call) => call.path === "/api/templates/tpl_123/preview",
+  );
+  assert.equal(previewCall?.body.variables.headline, "50% off everything");
+  assert.ok(
+    seen.some(
+      (call) =>
+        call.method === "DELETE" && call.path === "/api/templates/tpl_123",
+    ),
+    "the temporary template must be archived",
+  );
+  assert.equal(
+    seen.some((call) => call.path.startsWith("/api/render/image")),
+    false,
+    "drafting from an example must not spend credits",
+  );
+});
+
+test("brief-only creation without sampling adapts the closest example instead of a text card", async () => {
+  const STATIC_EXAMPLE = {
+    type: "video",
+    duration: 8,
+    visuals: [
+      {
+        type: "TEXT",
+        text: "Hero product spotlight",
+        style: { fontSize: "64px", color: "#ffffff" },
+      },
+    ],
+  };
+  const seen: string[] = [];
+  let savedDraftPayload: any;
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push(url.pathname);
+    if (url.pathname === "/api/render/creative-plan/api-key") {
+      return Response.json({ directions: [] });
+    }
+    if (url.pathname === "/api/library/examples/ecom-hero-promo/content") {
+      return Response.json(STATIC_EXAMPLE);
+    }
+    if (url.pathname === "/api/library/examples") {
+      return Response.json({
+        kind: "examples",
+        items: [
+          {
+            slug: "ecom-hero-promo",
+            title: "Product Hero Promo",
+            description: "Hero product promo for online stores",
+            meta: { pack: "ecommerce", resolution: "hd", duration: 30, scenes: 3 },
+          },
+        ],
+      });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 5,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/projects" && init?.method === "POST") {
+      savedDraftPayload = body.payload;
+      return Response.json(
+        {
+          project: {
+            id: DRAFT_ID,
+            name: body.name,
+            payload: body.payload,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media",
+      arguments: {
+        brief: "Product hero promo video for our online store",
+        type: "video",
+      },
+    }),
+  );
+
+  assert.equal(created.composition, "example-fallback");
+  assert.match(created.qualityNotice, /library example/);
+  assert.equal(created.draftId, DRAFT_ID);
+  assert.equal(created.selectedExample.slug, "ecom-hero-promo");
+  assert.equal(
+    savedDraftPayload.visuals[0].text,
+    "Hero product spotlight",
+    "the draft must carry the designed example, not a generic text card",
+  );
+  assert.equal(
+    seen.some((path) => path.startsWith("/api/templates")),
+    false,
+    "static examples resolve without a template round trip",
+  );
+});
+
 test("agent facade publishes quality-first workflow prompts and safe resources", async () => {
   const client = await creatorClient(fetch);
   const prompts = await client.listPrompts();

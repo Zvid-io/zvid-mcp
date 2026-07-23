@@ -146,7 +146,7 @@ test("accepts an active OAuth token and reads the dashboard MCP defaults", async
   );
 });
 
-test("concrete request settings override the dashboard snapshot source", async () => {
+test("request settings override dashboard defaults, but the cap is always consulted", async () => {
   const requests: string[] = [];
   const fetchImpl: typeof fetch = async (input) => {
     requests.push(String(input));
@@ -187,7 +187,12 @@ test("concrete request settings override the dashboard snapshot source", async (
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.match(body.result.instructions, /plan_creative_video/);
-      assert.deepEqual(requests, ["https://api.zvid.io/api/oauth/token-info"]);
+      // The dashboard credit limit is a hard ceiling, so preferences are
+      // fetched even when the request carries concrete settings.
+      assert.deepEqual(requests, [
+        "https://api.zvid.io/api/oauth/token-info",
+        "https://api.zvid.io/api/mcp/preferences",
+      ]);
     },
     { fetchImpl },
   );
@@ -364,6 +369,111 @@ test("an explicit workflow credit limit overrides the hosted fallback", async ()
     {
       fetchImpl,
       quoteSecret: "http-credit-limit-test-secret",
+      maxRenderCredits: 10,
+    },
+  );
+});
+
+test("the dashboard credit limit is a hard ceiling over the workflow value", async () => {
+  let renderCalls = 0;
+  let preferencesCalls = 0;
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    if (url.pathname === "/api/mcp/preferences") {
+      preferencesCalls += 1;
+      return Response.json({ defaultMaxRenderCredits: 28 });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 29,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/projects" && init?.method === "POST") {
+      return Response.json(
+        {
+          project: {
+            id: DRAFT_ID,
+            name: body.name,
+            payload: body.payload,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    if (url.pathname === `/api/projects/${DRAFT_ID}`) {
+      return Response.json({
+        project: {
+          id: DRAFT_ID,
+          name: "Launch Card",
+          payload: IMAGE_PAYLOAD,
+          version: 1,
+        },
+      });
+    }
+    if (url.pathname === "/api/render/image/api-key") {
+      renderCalls += 1;
+      return Response.json({ jobId: body.jobId, status: "queued" });
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  await withServer(
+    async (baseUrl) => {
+      const callTool = async (name: string, args: Record<string, unknown>) => {
+        const response = await fetch(
+          `${baseUrl}/mcp?profile=creator&maxRenderCredits=400`,
+          {
+            method: "POST",
+            headers: {
+              "X-Api-Key": "zvid_test",
+              "Content-Type": "application/json",
+              Accept: "application/json, text/event-stream",
+              "Mcp-Protocol-Version": "2025-03-26",
+            },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "tools/call",
+              params: { name, arguments: args },
+            }),
+          },
+        );
+        assert.equal(response.status, 200);
+        return (await response.json()).result;
+      };
+
+      const createdResult = await callTool("create_media", {
+        brief: "Create a launch card",
+        type: "image",
+        payload: IMAGE_PAYLOAD,
+      });
+      const created = JSON.parse(createdResult.content[0].text);
+      assert.equal(created.estimatedCredits, 29);
+
+      const blocked = await callTool("render_media", {
+        draftId: DRAFT_ID,
+        quoteToken: created.quoteToken,
+      });
+      assert.equal(blocked.isError, true);
+      assert.match(blocked.content[0].text, /per-render limit of 28/);
+      assert.equal(renderCalls, 0);
+      assert.equal(
+        preferencesCalls,
+        1,
+        "dashboard preferences should be cached across calls",
+      );
+    },
+    {
+      fetchImpl,
+      quoteSecret: "http-dashboard-cap-test-secret",
       maxRenderCredits: 10,
     },
   );

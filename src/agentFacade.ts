@@ -4,6 +4,7 @@ import { ZvidApiError, type ZvidClient } from "./client.js";
 import {
   ADAPTATION_CONTRACT,
   AUTHORING_GUIDELINES,
+  buildAdaptationMap,
   buildCreativePlan,
   repairProject,
   scoreLibraryCandidates,
@@ -51,7 +52,7 @@ interface ValidationQuote {
 
 const PROJECT_ID_RE = /^prj_[A-Za-z0-9]{20}$/;
 const MAX_SAMPLE_REFERENCE_CHARS = 120_000;
-const DEFAULT_MAX_RENDER_CREDITS = 30;
+const DEFAULT_MAX_RENDER_CREDITS = 120;
 
 const mediaTypeSchema = z.enum(["video", "image"]);
 
@@ -301,6 +302,91 @@ async function validateAndQuote(
   return response;
 }
 
+interface ResolvedExampleDraft {
+  ok: true;
+  payload: Record<string, unknown>;
+  adaptationMap: ReturnType<typeof buildAdaptationMap>;
+  contentRepairs: unknown;
+  unknownVariables: string[];
+  resolvedViaTemplate: boolean;
+}
+
+interface ResolvedExampleFailure {
+  ok: false;
+  previewErrors: unknown;
+  declaredVariables: unknown;
+  unknownVariables: string[];
+}
+
+/**
+ * Turn raw library-example content into a render-clean static payload.
+ * Template-only features (variables/condition/iterate) only resolve through a
+ * template dry run, so those examples take a create→preview→archive round trip;
+ * the temporary template never outlives the call.
+ */
+async function resolveExampleDraftPayload(
+  client: ZvidClient,
+  rawContent: Record<string, unknown>,
+  slug: string,
+  variables?: Record<string, unknown>,
+): Promise<ResolvedExampleDraft | ResolvedExampleFailure> {
+  const repair = repairProject(rawContent);
+  let payload = repair.repaired as Record<string, unknown>;
+  const adaptationMap = buildAdaptationMap(payload);
+  const declared = new Set(adaptationMap.variables.map((v) => v.name));
+  const provided = variables ?? {};
+  const unknownVariables = Object.keys(provided).filter(
+    (key) => !declared.has(key),
+  );
+  const needsTemplate =
+    adaptationMap.recommendedWorkflow === "template-render" ||
+    Object.keys(provided).length > 0;
+
+  if (needsTemplate) {
+    const template = (await client.post("/api/templates", {
+      name: `Example ${slug} ${Date.now()}`.replace(/[^A-Za-z0-9 _-]+/g, " "),
+      description: `Auto-created by create_media_from_example from library example "${slug}"`,
+      payload,
+    })) as { template?: { id?: string }; id?: string };
+    const templateId = template.template?.id ?? template.id;
+    if (!templateId) {
+      throw new Error(
+        "Template creation did not return an id — cannot continue.",
+      );
+    }
+    try {
+      const preview = (await client.post(
+        `/api/templates/${encodeURIComponent(templateId)}/preview`,
+        variables !== undefined ? { variables } : {},
+      )) as { project?: unknown };
+      payload = recordValue(preview.project, "Resolved example project");
+    } catch (err) {
+      if (err instanceof ZvidApiError && err.status === 400) {
+        return {
+          ok: false,
+          previewErrors: err.details ?? err.message,
+          declaredVariables: adaptationMap.variables,
+          unknownVariables,
+        };
+      }
+      throw err;
+    } finally {
+      await client
+        .delete(`/api/templates/${encodeURIComponent(templateId)}`)
+        .catch(() => undefined);
+    }
+  }
+
+  return {
+    ok: true,
+    payload,
+    adaptationMap,
+    contentRepairs: repair.changes,
+    unknownVariables,
+    resolvedViaTemplate: needsTemplate,
+  };
+}
+
 function quoteFor(
   project: StoredProject,
   validation: ValidationQuote,
@@ -546,20 +632,39 @@ async function preparePayload(
   const canSample = Boolean(
     options.server.server.getClientCapabilities()?.sampling,
   );
-  let composition: "provided" | "sampling" | "deterministic-fallback" =
-    input.payload
-      ? "provided"
-      : canSample
-        ? "sampling"
-        : "deterministic-fallback";
-  let payload =
-    input.payload ??
-    (canSample
-      ? await samplePayload(options, {
-          ...input,
-          referencePayload: context.referencePayload,
-        })
-      : deterministicFallbackPayload(input));
+  let composition:
+    | "provided"
+    | "sampling"
+    | "example-fallback"
+    | "deterministic-fallback" = input.payload
+    ? "provided"
+    : canSample
+      ? "sampling"
+      : "deterministic-fallback";
+  let payload = input.payload;
+  if (!payload && canSample) {
+    payload = await samplePayload(options, {
+      ...input,
+      referencePayload: context.referencePayload,
+    });
+  }
+  if (!payload && context.referencePayload) {
+    // Without sampling, the closest designed example (with its default
+    // content) beats improvising a generic text card.
+    const slug = String(
+      (context.candidate as { slug?: unknown } | undefined)?.slug ?? "example",
+    );
+    const adapted = await resolveExampleDraftPayload(
+      options.client,
+      context.referencePayload,
+      slug,
+    ).catch(() => undefined);
+    if (adapted?.ok) {
+      payload = adapted.payload;
+      composition = "example-fallback";
+    }
+  }
+  if (!payload) payload = deterministicFallbackPayload(input);
   payload = { ...payload, type: input.type };
   if (input.name) payload.name = sanitizeName(input.name, "Zvid draft");
 
@@ -647,8 +752,8 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
       title: "Create a Zvid media draft",
       description:
         requiresAuthoredPayload
-          ? "Save an exact, validated project payload as a persistent video or image draft and return a signed credit quote. First use the planning, example/library, stock-media, repair and validation tools; then pass the complete payload here. Creator refuses brief-only composition so weak models cannot improvise a low-quality design. Draft creation does NOT spend render credits."
-          : "Turn a natural-language brief or exact payload into a validated, persistent video or image draft and a signed credit quote. The brief argument is required. This does NOT spend render credits.",
+          ? "Save an exact, validated project payload as a persistent video or image draft and return a signed credit quote. First use the planning, example/library, stock-media, repair and validation tools; then pass the complete payload here. When a library example matches the brief, prefer create_media_from_example { slug, variables } instead — it resolves the design server-side without this payload round trip. Creator refuses brief-only composition so weak models cannot improvise a low-quality design. Draft creation does NOT spend render credits."
+          : "Turn a natural-language brief or exact payload into a validated, persistent video or image draft and a signed credit quote. The brief argument is required. This does NOT spend render credits. When a library example matches the brief, prefer create_media_from_example { slug, variables } — it keeps the designed layout intact.",
       inputSchema: {
         brief: z
           .string()
@@ -692,11 +797,134 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
               qualityNotice:
                 "The connected MCP client does not support sampling, so Zvid created a safe type-led draft. Review it in the editor or supply exact project JSON for richer composition.",
             }
-          : {}),
+          : prepared.composition === "example-fallback"
+            ? {
+                qualityNotice:
+                  "The connected MCP client does not support sampling, so Zvid adapted the closest matching library example with its default content. Review it in the editor, or call create_media_from_example with new variable values to put your own copy and media into the design.",
+              }
+            : {}),
         selectedExample: prepared.candidate,
         creativePlan: prepared.plan,
         nextStep:
           "Review the draft in the editor or call revise_media. Call render_media with draftId + quoteToken only when ready to spend the quoted credits.",
+      });
+    }),
+  );
+
+  registerTool(
+    "create_media_from_example",
+    {
+      title: "Create a draft from a library example",
+      description:
+        "The EASIEST approval-safe example path: pick a library example and supply new VARIABLE VALUES (copy, media URLs, brand colors). The server fetches the example, dry-runs the variables, saves the fully resolved design as a persistent draft and returns a signed credit quote — the designed layout and animations stay intact and NO credits are spent. Use start_from_example (or plan_creative_video libraryCandidates) to see variable names and defaults first. Render later with render_media once the quoted credits are approved.",
+      inputSchema: {
+        slug: z
+          .string()
+          .trim()
+          .min(1)
+          .max(255)
+          .describe(
+            "Library example slug from plan_creative_video libraryCandidates, find_matching_examples, or search_creative_library",
+          ),
+        variables: z
+          .record(z.unknown())
+          .optional()
+          .describe(
+            "New values for the example's declared variables (see start_from_example adaptationMap.variables). Omitted variables keep their defaults.",
+          ),
+        brief: z
+          .string()
+          .trim()
+          .max(5000)
+          .optional()
+          .describe(
+            "The user's original media request, used for draft naming and review context.",
+          ),
+        name: z.string().max(255).optional(),
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    guarded(async ({ slug, variables, brief, name }) => {
+      const base = `/api/library/examples/${encodeURIComponent(slug)}`;
+      const item = await options.client.get(base);
+      let content: Record<string, unknown>;
+      try {
+        content = (await options.client.getRedirectedJson(
+          `${base}/content`,
+        )) as Record<string, unknown>;
+      } catch (err) {
+        if (
+          err instanceof ZvidApiError &&
+          (err.status === 401 || err.status === 403) &&
+          err.error === "PREMIUM_REQUIRED"
+        ) {
+          return {
+            premiumLocked: true,
+            slug,
+            item,
+            message:
+              "This example is premium — adapting it requires a paid Zvid plan. Pick a free candidate from find_matching_examples (excludePremium: true) instead.",
+          };
+        }
+        throw err;
+      }
+
+      const resolved = await resolveExampleDraftPayload(
+        options.client,
+        content,
+        slug,
+        variables,
+      );
+      if (!resolved.ok) {
+        return {
+          drafted: false,
+          slug,
+          message:
+            "The variable values failed the template dry run — fix them and call create_media_from_example again.",
+          previewErrors: resolved.previewErrors,
+          declaredVariables: resolved.declaredVariables,
+          ...(resolved.unknownVariables.length
+            ? {
+                unknownVariables: resolved.unknownVariables,
+                unknownVariablesNote:
+                  "These provided names are not declared by the example and were ignored — likely typos.",
+              }
+            : {}),
+        };
+      }
+
+      let payload = resolved.payload;
+      const validation = await validateAndQuote(options.client, payload);
+      payload = validation.payload ?? payload;
+      const meta = item as { title?: string };
+      const draftName = sanitizeName(
+        name,
+        `${meta.title ?? slug}${brief ? ` ${brief.slice(0, 60)}` : ""} draft`,
+      );
+      const project = await saveProject(options.client, draftName, payload);
+      const signedQuote = quoteFor(project, validation, options);
+      return draftResult(project, validation, signedQuote, {
+        composition: "example-adaptation",
+        slug,
+        selectedExample: item,
+        ...(Array.isArray(resolved.contentRepairs) &&
+        resolved.contentRepairs.length
+          ? { contentRepairs: resolved.contentRepairs }
+          : {}),
+        ...(resolved.unknownVariables.length
+          ? {
+              unknownVariables: resolved.unknownVariables,
+              unknownVariablesNote:
+                "These provided names are not declared by the example and had no effect — check adaptationMap.variables from start_from_example.",
+            }
+          : {}),
+        nextStep:
+          "Review the draft in the editor. Call render_media with draftId + quoteToken only when the user approves the quoted credits.",
       });
     }),
   );
@@ -826,7 +1054,7 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
       }
       if (validation.creditsRequired > maxRenderCredits) {
         throw new Error(
-          `This render requires ${validation.creditsRequired} credits, above the MCP per-render limit of ${maxRenderCredits}. Raise Maximum credits per render in the Zvid dashboard or Max Render Credits in this n8n workflow, then request a fresh quote.`,
+          `This render requires ${validation.creditsRequired} credits, above the MCP per-render limit of ${maxRenderCredits}. The dashboard MCP credit limit is a hard ceiling and the workflow's Max Render Credits requests within it — raise whichever is lower, then request a fresh quote.`,
         );
       }
       const jobId = idempotencyKey ?? idempotencyKeyForQuote(quoteToken);

@@ -31,8 +31,10 @@ const DEFAULT_MCP_RESOURCE = "https://mcp.zvid.io/mcp";
 const DEFAULT_OAUTH_ISSUER = "https://api.zvid.io";
 const OAUTH_SCOPE = "zvid:mcp";
 const OAUTH_SCOPES = [OAUTH_SCOPE];
-const DEFAULT_MAX_RENDER_CREDITS = 30;
+const DEFAULT_MAX_RENDER_CREDITS = 120;
 const MAX_CONFIGURABLE_RENDER_CREDITS = 10_000;
+const PREFERENCES_TTL_MS = 60_000;
+const PREFERENCES_CACHE_MAX_ENTRIES = 500;
 
 type Credential =
   { kind: "apiKey"; value: string } | { kind: "oauth"; value: string };
@@ -188,14 +190,19 @@ function requestedMaxRenderCredits(
     : { ok: false, value: values[0] };
 }
 
+interface DashboardPreferences {
+  defaultProfile?: ToolProfile;
+  defaultMaxRenderCredits?: number;
+}
+
+/**
+ * The dashboard's MCP credit limit is a hard per-render ceiling, so it must be
+ * consulted on every connection — a value absent, invalid, or unreachable means
+ * "no dashboard ceiling", never a fallback number.
+ */
 async function dashboardPreferences(
   client: ZvidClient,
-  fallbackProfile: ToolProfile,
-  fallbackMaxRenderCredits: number,
-): Promise<{
-  defaultProfile: ToolProfile;
-  defaultMaxRenderCredits: number;
-}> {
+): Promise<DashboardPreferences> {
   try {
     const preferences = await client.get<{
       defaultProfile?: unknown;
@@ -203,20 +210,16 @@ async function dashboardPreferences(
     }>("/api/mcp/preferences");
     const storedMaxRenderCredits = Number(preferences.defaultMaxRenderCredits);
     return {
-      defaultProfile:
-        resolveToolProfile(preferences.defaultProfile) ?? fallbackProfile,
+      defaultProfile: resolveToolProfile(preferences.defaultProfile),
       defaultMaxRenderCredits:
         Number.isSafeInteger(storedMaxRenderCredits) &&
         storedMaxRenderCredits > 0 &&
         storedMaxRenderCredits <= MAX_CONFIGURABLE_RENDER_CREDITS
           ? storedMaxRenderCredits
-          : fallbackMaxRenderCredits,
+          : undefined,
     };
   } catch {
-    return {
-      defaultProfile: fallbackProfile,
-      defaultMaxRenderCredits: fallbackMaxRenderCredits,
-    };
+    return {};
   }
 }
 
@@ -244,6 +247,31 @@ export function createZvidHttpServer(options: ZvidHttpServerOptions = {}) {
     options.maxRenderCredits ??
     positiveNumber(process.env.ZVID_MCP_MAX_RENDER_CREDITS) ??
     DEFAULT_MAX_RENDER_CREDITS;
+  const preferencesCache = new Map<
+    string,
+    { value: DashboardPreferences; expiresAt: number }
+  >();
+
+  async function cachedDashboardPreferences(
+    client: ZvidClient,
+    credentialValue: string,
+  ): Promise<DashboardPreferences> {
+    const key = crypto
+      .createHash("sha256")
+      .update(credentialValue)
+      .digest("hex");
+    const cached = preferencesCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    const value = await dashboardPreferences(client);
+    if (preferencesCache.size >= PREFERENCES_CACHE_MAX_ENTRIES) {
+      preferencesCache.clear();
+    }
+    preferencesCache.set(key, {
+      value,
+      expiresAt: Date.now() + PREFERENCES_TTL_MS,
+    });
+    return value;
+  }
 
   async function handleMcpPost(req: IncomingMessage, res: ServerResponse) {
     const selected = requestedProfile(req);
@@ -310,21 +338,24 @@ export function createZvidHttpServer(options: ZvidHttpServerOptions = {}) {
       baseUrl,
       fetchImpl,
     });
-    const preferences =
-      selected.profile !== undefined &&
-      selectedMaxRenderCredits.maxRenderCredits !== undefined
-        ? null
-        : await dashboardPreferences(
-            client,
-            configuredProfile,
-            configuredMaxRenderCredits,
-          );
+    // The dashboard MCP credit limit, when set, is a hard ceiling: a workflow
+    // (query param) can only request less, never more. Profile stays a
+    // workflow-level choice with the dashboard value as its default.
+    const preferences = await cachedDashboardPreferences(
+      client,
+      credential.value,
+    );
     const profile =
-      selected.profile ?? preferences?.defaultProfile ?? configuredProfile;
-    const maxRenderCredits =
+      selected.profile ?? preferences.defaultProfile ?? configuredProfile;
+    const dashboardCap = preferences.defaultMaxRenderCredits;
+    const requestedMaxCredits =
       selectedMaxRenderCredits.maxRenderCredits ??
-      preferences?.defaultMaxRenderCredits ??
+      dashboardCap ??
       configuredMaxRenderCredits;
+    const maxRenderCredits =
+      dashboardCap !== undefined
+        ? Math.min(requestedMaxCredits, dashboardCap)
+        : requestedMaxCredits;
     const server = createZvidServer({
       client,
       version,

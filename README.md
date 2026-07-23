@@ -46,7 +46,9 @@ and maximum credits per render for MCP clients. A client may connect with
 concrete values in the endpoint, for example
 `https://mcp.zvid.io/mcp?profile=creator&maxRenderCredits=60`; this is connection
 configuration and cannot be changed by the model during a conversation. The
-default credit ceiling is 30.
+default per-render credit limit is 120, and the dashboard limit, when set, is a
+hard ceiling: the effective limit is the lower of the dashboard value and the
+value requested in the endpoint.
 
 The official n8n workflow copies both dashboard defaults into its workflow JSON
 when downloaded. Each workflow can then choose another concrete profile and
@@ -67,7 +69,7 @@ npx -y @zvid/mcp --api-key zvid_your_key_here --api-url http://localhost:4000
 | `ZVID_API_KEY`                | `--api-key zvid_…`   | stdio only | —                     | Zvid API key                                                                    |
 | `ZVID_API_URL`                | `--api-url http://…` | no         | `https://api.zvid.io` | Orchestrator base URL                                                           |
 | `ZVID_MCP_PROFILE`            | `--profile creator`  | no         | `creator`             | Tool profile                                                                    |
-| `ZVID_MCP_MAX_RENDER_CREDITS` | —                    | no         | `30`                  | Legacy/fallback hosted limit; dashboard and explicit n8n values take precedence |
+| `ZVID_MCP_MAX_RENDER_CREDITS` | —                    | no         | `120`                  | Legacy/fallback hosted limit; dashboard and explicit n8n values take precedence |
 | `ZVID_MCP_MAX_BULK_ITEMS`     | —                    | no         | `25`                  | Automation/developer bulk-call item ceiling                                     |
 | `ZVID_MCP_QUOTE_SECRET`       | —                    | hosted     | process-random        | Shared HMAC secret for multi-instance quotes                                    |
 
