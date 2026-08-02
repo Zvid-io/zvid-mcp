@@ -18,6 +18,8 @@ const READONLY_FACADE_TOOLS = new Set([
 const APPROVAL_FACADE_TOOLS = new Set([
   "create_media",
   "create_media_from_example",
+  "create_media_template",
+  "create_media_from_template",
   "revise_media",
   "render_media",
   ...READONLY_FACADE_TOOLS,

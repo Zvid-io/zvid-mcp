@@ -781,6 +781,11 @@ export function buildProjectJsonSchema(
           MAX_STYLE_VALUE_LEN +
           " chars.",
       },
+      fitToBox: {
+        type: "boolean",
+        description:
+          "Scale the typography down just enough that the painted text stays inside the declared width/height instead of being clipped at the element's edge. No effect when the content already fits, so an unchanged template renders identically.",
+      },
       customCode: { $ref: "#/$defs/customCode" },
       designer: { $ref: "#/$defs/designer" },
     },
@@ -822,6 +827,7 @@ export function buildProjectJsonSchema(
         limits.maxDuration,
         "Play only this many seconds of the source.",
       ),
+      track: int(0, 1_000_000, "Mix track index; audio tracks mix together."),
     },
     additionalProperties: false,
   };
@@ -2320,6 +2326,23 @@ export const ADAPTATION_CONTRACT: string[] = [
   "Finish with validate_project_json (remote: true) on the final payload — or preview_template for template renders — and fix every error AND layout warning before rendering.",
 ];
 
+/**
+ * The rules for AUTHORING a reusable template (a project that declares
+ * `variables`). Embedded in create_media_template's sampling prompt and safe
+ * to show any client.
+ */
+export const TEMPLATE_AUTHORING_GUIDELINES: string[] = [
+  "Declare a top-level `variables` object. Every genuinely replaceable value — brand name, headline, body copy, product names, prices, CTA label, media URLs, logo URL, accent colors — gets ONE variable with a safe literal default that renders correctly as-is.",
+  "Reference variables as {{name}} inside string fields (HTML copy, text, src URLs, color values). A field whose entire value is \"{{name}}\" takes the variable's raw typed value; placeholders embedded in longer strings are interpolated as text.",
+  "Every {{reference}} MUST have a matching declared default — template validation resolves the project with defaults only and rejects unresolved variables.",
+  "Variables parameterize CONTENT, never structure: positions, sizes, widths/heights, animations, timings, transitions, scene layout and font sizes stay literal so every instantiation keeps the designed layout.",
+  "Video templates must declare an explicit numeric duration > 0 on every scene — template validation requires it (variable-length media cannot drive scene timing in a template).",
+  "Name variables in camelCase after their role: headline, subheadline, brandName, ctaText, productImage1, productName1, price1, accentColor, musicUrl.",
+  "Defaults are realistic sample content, not lorem ipsum and not instructions — the template must look presentable when rendered untouched.",
+  "Keep the set focused: one variable per replaceable slot, not per word. Standard templates need roughly 5-30 variables (hard backend cap 200).",
+  "Default media URLs must be real, publicly fetchable assets (stock search results or library assets) — never invented URLs.",
+];
+
 const VARIABLE_REF_REGEX = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
 
 function extractVariableRefs(json: string): string[] {
@@ -2886,6 +2909,7 @@ const VISUAL_KEYS: Record<ElementType, string[]> = {
     "text",
     "html",
     "style",
+    "fitToBox",
     "customCode",
     "designer",
   ],
@@ -3513,6 +3537,8 @@ function validateVisual(
         validateTextHtml(ctx, `${f}.html`, visual.html);
       if (visual.style !== undefined)
         validateStyleObject(ctx, `${f}.style`, visual.style);
+      if (visual.fitToBox !== undefined && typeof visual.fitToBox !== "boolean")
+        err(ctx, `${f}.fitToBox`, `${f}.fitToBox must be a boolean`);
       if (visual.customCode !== undefined)
         validateCustomCode(ctx, `${f}.customCode`, visual.customCode);
       if (visual.designer !== undefined)
@@ -3540,6 +3566,7 @@ const AUDIO_KEYS = new Set([
   "audioBegin",
   "audioEnd",
   "audioDuration",
+  "track",
 ]);
 
 function validateAudio(ctx: Ctx, f: string, a: unknown) {
@@ -3584,6 +3611,12 @@ function validateAudio(ctx: Ctx, f: string, a: unknown) {
     checkNumber(ctx, `${f}.audioDuration`, a.audioDuration, {
       min: 0,
       max: L.maxDuration,
+    });
+  if (a.track !== undefined)
+    checkNumber(ctx, `${f}.track`, a.track, {
+      min: 0,
+      max: 1_000_000,
+      integer: true,
     });
   // temporal
   if (isNum(a.enter) && isNum(a.exit) && a.exit < a.enter) {
@@ -5147,9 +5180,9 @@ export function repairProject(
     audios.forEach((a: unknown, i: number) => {
       if (!isObj(a)) return;
       const field = `${prefix}[${i}]`;
-      // Editor-authored payloads carry fields (e.g. track) the backend
-      // schema rejects with unknown(false) — strip them like visual keys,
-      // keeping template-only fields intact.
+      // Editor-authored payloads can carry fields the backend schema
+      // rejects with unknown(false) — strip them like visual keys, keeping
+      // template-only fields intact.
       for (const k of Object.keys(a)) {
         if (!AUDIO_KEYS.has(k) && !TEMPLATE_ONLY_KEYS.has(k)) {
           delete a[k];
@@ -5523,6 +5556,12 @@ export function getElementDocs(type: string): ElementDoc | undefined {
           description: `CSS object (max ${MAX_STYLE_PROPS} props): {"fontSize": "64px", "color": "#ffffff", "fontWeight": 700, "fontFamily": "Inter"}. url()/@import/expression()/CSS comments are rejected.`,
         },
         {
+          name: "fitToBox",
+          type: "boolean",
+          description:
+            "Scale the typography down just enough that the painted text stays inside the declared width/height instead of being clipped at the element's edge. Needs width and/or height. One factor scales font-size, line-height, letter-spacing and word-spacing together (floor 0.5x); no effect when the content already fits, so an unchanged template renders identically.",
+        },
+        {
           name: "customCode",
           type: "{css?, js?, animationDuration?}",
           description: "Sandboxed Design Studio animation code.",
@@ -5535,7 +5574,8 @@ export function getElementDocs(type: string): ElementDoc | undefined {
         ...BASE_FIELD_DOCS,
       ],
       notes: [
-        "Font sizing/styling lives in `style` (CSS-like), not top-level fields — top-level fontSize/color are IGNORED.",
+        "Font sizing/styling lives in `style` (CSS-like), not top-level fields — top-level fontSize/color are IGNORED. The one typography-related top-level field that IS read is the boolean `fitToBox`.",
+        "Copy whose length varies (variables, generated headlines): set fitToBox: true with a width/height instead of hand-shrinking fontSize — the renderer only scales down when the text would otherwise be clipped, so the designed copy still renders at its designed size.",
         'Style values must not contain url() or @import (fonts load from Google Fonts via fontFamily; default "Poppins").',
         'LAYOUT: text renders at the TOP of its box — add display: "flex", alignItems: "center", justifyContent: "center" to center it. Padding renders OUTSIDE width/height (content-box) and gets cut off: size cards via width/height + flex centering, never via padding.',
         "Put a headline + subline INSIDE one element via `html` (two <p> tags with inline styles) instead of two positioned elements — they can never overlap or drift apart.",
@@ -5600,6 +5640,12 @@ export function getElementDocs(type: string): ElementDoc | undefined {
           name: "audioDuration",
           type: "number (s)",
           description: "Play only this many seconds of the source.",
+        },
+        {
+          name: "track",
+          type: "integer >= 0",
+          description:
+            "Mix track index. Audio tracks are mixed together, not stacked — this only groups entries, it does not mute anything.",
         },
       ],
       notes: [

@@ -703,6 +703,462 @@ test("brief-only creation without sampling adapts the closest example instead of
   );
 });
 
+const TEMPLATE_ID = "tpl_00000000000000000000";
+const PARAMETERIZED_PAYLOAD = {
+  type: "video",
+  name: "Shoes Promo Template",
+  width: 720,
+  height: 1280,
+  frameRate: 30,
+  outputFormat: "mp4",
+  variables: {
+    headline: "Step Into Comfort",
+    productImage: "https://cdn.example.com/shoe.jpg",
+    price: "$79",
+    brandName: "StrideCo",
+  },
+  scenes: [
+    {
+      id: "hook",
+      duration: 5,
+      visuals: [
+        {
+          type: "TEXT",
+          html: "<p>{{headline}}</p>",
+          width: 600,
+          height: 200,
+          position: "center-center",
+          style: { fontSize: "72px", color: "#ffffff", fontFamily: "Inter" },
+        },
+        { type: "IMAGE", src: "{{productImage}}", width: 720, height: 720 },
+      ],
+    },
+    {
+      id: "cta",
+      duration: 5,
+      visuals: [
+        {
+          type: "TEXT",
+          html: "<p>{{brandName}} — {{price}}</p>",
+          width: 600,
+          height: 160,
+          position: "bottom-center",
+          style: { fontSize: "48px", color: "#ffffff", fontFamily: "Inter" },
+        },
+      ],
+    },
+  ],
+};
+const VARIABLES_SUMMARY = Object.entries(PARAMETERIZED_PAYLOAD.variables).map(
+  ([name, def]) => ({ name, type: typeof def, default: def, used: true }),
+);
+
+test("create_media_template saves the parameterized payload verbatim as a persistent template", async () => {
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (url.pathname === "/api/render/validate/api-key") {
+      // The live validator resolves defaults and returns the RESOLVED payload;
+      // the facade must never save that flattened form as the template.
+      return Response.json({
+        valid: true,
+        creditsRequired: 6,
+        payload: { ...body.payload, variables: undefined },
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/templates" && init?.method === "POST") {
+      return Response.json(
+        {
+          template: {
+            id: TEMPLATE_ID,
+            name: body.name,
+            description: body.description,
+            project: body.payload,
+            type: "video",
+            variablesSummary: VARIABLES_SUMMARY,
+            version: 1,
+            status: "active",
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_template",
+      arguments: {
+        brief: "Promo template for adult male shoes",
+        type: "video",
+        payload: PARAMETERIZED_PAYLOAD,
+      },
+    }),
+  );
+
+  assert.equal(created.kind, "template");
+  assert.equal(created.templateId, TEMPLATE_ID);
+  assert.equal(
+    created.editorUrl,
+    `https://editor.zvid.io/?template=${TEMPLATE_ID}`,
+  );
+  assert.equal(created.composition, "provided");
+  assert.equal(created.estimatedCreditsWithDefaults, 6);
+  assert.deepEqual(created.declaredVariables, VARIABLES_SUMMARY);
+  const saveCall = seen.find(
+    (call) => call.path === "/api/templates" && call.method === "POST",
+  );
+  assert.deepEqual(
+    saveCall?.body.payload,
+    PARAMETERIZED_PAYLOAD,
+    "the template must keep its variables and {{placeholders}} verbatim",
+  );
+  assert.equal(
+    seen.some((call) => call.method === "DELETE"),
+    false,
+    "the created template must persist",
+  );
+  assert.equal(
+    seen.some((call) => call.path.includes("/api/render/api-key")),
+    false,
+    "template creation must not spend credits",
+  );
+});
+
+test("create_media_template rejects a payload with no declared variables before any save", async () => {
+  const seen: string[] = [];
+  const fetchImpl = (async (input: URL | RequestInfo) => {
+    seen.push(new URL(String(input)).pathname);
+    return Response.json({}, { status: 404 });
+  }) as typeof fetch;
+  const client = await creatorClient(fetchImpl);
+  const result = await client.callTool({
+    name: "create_media_template",
+    arguments: {
+      brief: "Promo template for shoes",
+      type: "image",
+      payload: IMAGE_PAYLOAD,
+    },
+  });
+  assert.equal(result.isError, true);
+  const text = (result.content as { text: string }[])[0].text;
+  assert.match(text, /variables/);
+  assert.match(text, /create_media/);
+  assert.equal(
+    seen.includes("/api/templates"),
+    false,
+    "an unparameterized payload must never reach the template API",
+  );
+});
+
+test("create_media_template composes via sampling and corrects a variable-free first attempt", async () => {
+  const prompts: string[] = [];
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (url.pathname === "/api/render/creative-plan/api-key") {
+      return Response.json({ directions: [] });
+    }
+    if (url.pathname === "/api/library/examples") {
+      return Response.json({ items: [] });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 8,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/templates" && init?.method === "POST") {
+      return Response.json(
+        {
+          template: {
+            id: TEMPLATE_ID,
+            name: body.name,
+            project: body.payload,
+            type: "video",
+            variablesSummary: VARIABLES_SUMMARY,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const staticFirstAttempt = {
+    type: "video",
+    width: 720,
+    height: 1280,
+    scenes: PARAMETERIZED_PAYLOAD.scenes.map((scene) => ({
+      ...scene,
+      visuals: [
+        {
+          type: "TEXT",
+          text: "Static copy",
+          width: 600,
+          height: 200,
+          style: { fontSize: "60px", color: "#ffffff" },
+        },
+      ],
+    })),
+  };
+  const client = await creatorClient(fetchImpl, (prompt) => {
+    prompts.push(prompt);
+    return prompts.length === 1 ? staticFirstAttempt : PARAMETERIZED_PAYLOAD;
+  });
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_template",
+      arguments: { brief: "Promo template for adult male shoes", type: "video" },
+    }),
+  );
+
+  assert.equal(created.composition, "sampling");
+  assert.equal(created.templateId, TEMPLATE_ID);
+  assert.equal(prompts.length, 2, "a variable-free attempt must be corrected");
+  assert.match(prompts[0], /templateAuthoringGuidelines/);
+  assert.match(prompts[0], /REUSABLE/);
+  assert.match(prompts[1], /must declare a non-empty top-level `variables`/);
+  const saveCall = seen.find(
+    (call) => call.path === "/api/templates" && call.method === "POST",
+  );
+  assert.deepEqual(saveCall?.body.payload.variables, {
+    ...PARAMETERIZED_PAYLOAD.variables,
+  });
+});
+
+test("create_media_template without sampling falls back to a parameterized deterministic template", async () => {
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (url.pathname === "/api/render/creative-plan/api-key") {
+      return Response.json({ directions: [] });
+    }
+    if (url.pathname === "/api/library/examples") {
+      return Response.json({ items: [] });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 5,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/templates" && init?.method === "POST") {
+      return Response.json(
+        {
+          template: {
+            id: TEMPLATE_ID,
+            name: body.name,
+            project: body.payload,
+            type: "video",
+            variablesSummary: [],
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_template",
+      arguments: {
+        brief: "Fallback promo template for running shoes",
+        type: "video",
+        aspectRatio: "9:16",
+        duration: 12,
+      },
+    }),
+  );
+
+  assert.equal(created.composition, "deterministic-fallback");
+  assert.match(created.qualityNotice, /does not support sampling/);
+  const saveCall = seen.find(
+    (call) => call.path === "/api/templates" && call.method === "POST",
+  );
+  const savedVariables = saveCall?.body.payload.variables ?? {};
+  for (const name of ["brandName", "headline", "message", "ctaText"]) {
+    assert.ok(name in savedVariables, `fallback must declare ${name}`);
+  }
+  assert.match(JSON.stringify(saveCall?.body.payload.scenes), /\{\{headline\}\}/);
+  assert.ok(
+    Array.isArray(created.declaredVariables) &&
+      created.declaredVariables.some((v: any) => v.name === "headline"),
+    "declaredVariables must fall back to the adaptation map when the API omits a summary",
+  );
+});
+
+test("create_media_from_template resolves variables into a quoted draft and keeps the template", async () => {
+  const RESOLVED = {
+    ...PARAMETERIZED_PAYLOAD,
+    variables: undefined,
+    scenes: PARAMETERIZED_PAYLOAD.scenes.map((scene) => ({
+      ...scene,
+      visuals: scene.visuals.map((visual: any) =>
+        visual.type === "TEXT"
+          ? { ...visual, html: visual.html.replace("{{headline}}", "New Drop") }
+          : { ...visual, src: "https://cdn.example.com/new-shoe.jpg" },
+      ),
+    })),
+  };
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  let savedDraftPayload: unknown;
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (
+      url.pathname === `/api/templates/${TEMPLATE_ID}` &&
+      init?.method !== "DELETE"
+    ) {
+      return Response.json({
+        template: {
+          id: TEMPLATE_ID,
+          name: "Shoes Promo Template",
+          project: PARAMETERIZED_PAYLOAD,
+          variablesSummary: VARIABLES_SUMMARY,
+          version: 3,
+        },
+      });
+    }
+    if (url.pathname === `/api/templates/${TEMPLATE_ID}/preview`) {
+      return Response.json({ project: RESOLVED, stats: {} });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 7,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/projects" && init?.method === "POST") {
+      savedDraftPayload = body.payload;
+      return Response.json(
+        {
+          project: {
+            id: DRAFT_ID,
+            name: body.name,
+            payload: body.payload,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_from_template",
+      arguments: {
+        templateId: TEMPLATE_ID,
+        variables: { headline: "New Drop", bogusName: "ignored" },
+        brief: "Autumn drop announcement",
+      },
+    }),
+  );
+
+  assert.equal(created.composition, "template-instantiation");
+  assert.equal(created.draftId, DRAFT_ID);
+  assert.equal(created.templateId, TEMPLATE_ID);
+  assert.equal(created.templateVersion, 3);
+  assert.equal(created.estimatedCredits, 7);
+  assert.ok(created.quoteToken);
+  assert.deepEqual(created.unknownVariables, ["bogusName"]);
+  assert.deepEqual(savedDraftPayload, JSON.parse(JSON.stringify(RESOLVED)));
+  const previewCall = seen.find(
+    (call) => call.path === `/api/templates/${TEMPLATE_ID}/preview`,
+  );
+  assert.equal(previewCall?.body.variables.headline, "New Drop");
+  assert.equal(
+    seen.some((call) => call.method === "DELETE"),
+    false,
+    "instantiation must never archive the source template",
+  );
+  assert.equal(
+    seen.some((call) => call.path.includes("/api/render/api-key")),
+    false,
+    "instantiation must not spend credits",
+  );
+});
+
+test("create_media_from_template surfaces a failed dry run without drafting", async () => {
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === `/api/templates/${TEMPLATE_ID}/preview`) {
+      return Response.json(
+        {
+          error: "Validation failed",
+          details: [{ field: "variables.price", message: "must be a string" }],
+        },
+        { status: 400 },
+      );
+    }
+    if (url.pathname === `/api/templates/${TEMPLATE_ID}`) {
+      return Response.json({
+        template: {
+          id: TEMPLATE_ID,
+          name: "Shoes Promo Template",
+          project: PARAMETERIZED_PAYLOAD,
+          variablesSummary: VARIABLES_SUMMARY,
+          version: 3,
+        },
+      });
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const result = firstJson(
+    await client.callTool({
+      name: "create_media_from_template",
+      arguments: {
+        templateId: TEMPLATE_ID,
+        variables: { price: 79 },
+      },
+    }),
+  );
+  assert.equal(result.drafted, false);
+  assert.equal(result.templateId, TEMPLATE_ID);
+  assert.ok(result.previewErrors);
+  assert.deepEqual(result.declaredVariables, VARIABLES_SUMMARY);
+});
+
 test("agent facade publishes quality-first workflow prompts and safe resources", async () => {
   const client = await creatorClient(fetch);
   const prompts = await client.listPrompts();
@@ -730,4 +1186,5 @@ test("agent facade publishes quality-first workflow prompts and safe resources",
   });
   assert.ok("text" in guide.contents[0]);
   assert.match(String(guide.contents[0].text), /adaptationContract/);
+  assert.match(String(guide.contents[0].text), /templateAuthoringGuidelines/);
 });

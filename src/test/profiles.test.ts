@@ -11,6 +11,8 @@ test("creator profile exposes the promoted quality authoring toolset", () => {
   for (const name of [
     "create_media",
     "create_media_from_example",
+    "create_media_template",
+    "create_media_from_template",
     "revise_media",
     "render_media",
     "plan_creative_video",
@@ -37,6 +39,8 @@ test("profiles progressively expose automation capabilities", () => {
   assert.equal(isToolEnabled("readonly", "get_media"), true);
   assert.equal(isToolEnabled("readonly", "render_media"), false);
   assert.equal(isToolEnabled("readonly", "create_media_from_example"), false);
+  assert.equal(isToolEnabled("readonly", "create_media_template"), false);
+  assert.equal(isToolEnabled("readonly", "create_media_from_template"), false);
 });
 
 test("profile parsing and validation are conservative", () => {

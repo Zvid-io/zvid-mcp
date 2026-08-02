@@ -9,6 +9,8 @@ import type { ToolProfile } from "../profiles.js";
 const EXPECTED_TOOLS = [
   "create_media",
   "create_media_from_example",
+  "create_media_template",
+  "create_media_from_template",
   "revise_media",
   "render_media",
   "get_media",
@@ -112,6 +114,8 @@ test("creator profile exposes quality authoring and requires exact payloads", as
     "create_template",
     "create_media",
     "create_media_from_example",
+    "create_media_template",
+    "create_media_from_template",
     "render_media",
   ]) {
     assert.ok(names.includes(name), name);
@@ -140,6 +144,10 @@ test("creator profile exposes quality authoring and requires exact payloads", as
   assert.match(String(create?.description), /refuses brief-only composition/);
   const revise = tools.find((tool) => tool.name === "revise_media");
   assert.ok(revise?.inputSchema.required?.includes("payload"));
+  const template = tools.find((tool) => tool.name === "create_media_template");
+  assert.ok(template?.inputSchema.required?.includes("payload"));
+  assert.ok(template?.inputSchema.required?.includes("brief"));
+  assert.match(String(template?.description), /PARAMETERIZED/);
 });
 
 test("automation profile caps bulk calls and redacts stored webhook secrets", async () => {

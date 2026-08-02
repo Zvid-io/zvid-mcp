@@ -454,6 +454,7 @@ const CREATOR_INSTRUCTIONS = `Zvid Creator uses exact, quality-first project aut
 5. For manually composed payloads, always call validate_project_json with remote: true and fix every error and layout warning.
 6. Call create_media with the original brief and the complete validated payload. Creator rejects calls without payload, so it never improvises a design from the brief. Draft creation does not spend credits.
 7. Review the editor link. Revisions also require a complete validated replacement payload. Call render_media only after the user approves the exact quoted credits, using the returned draftId and quoteToken.
+8. TEMPLATE INTENT: when the user asks for a reusable TEMPLATE, replaceable fields, or a design to personalize per item ("a template for...", "for each product/customer"), do NOT save a static draft. Author a PARAMETERIZED payload — top-level \`variables\` with safe defaults referenced via {{name}} placeholders (see templateAuthoringGuidelines in zvid://authoring/guidelines; start_from_example keeps an example's existing variables) — and call create_media_template. It returns a persistent tpl_ id, the declared variables and an editor link. Instantiate with create_media_from_template { templateId, variables } for an approval-gated draft and quote.
 For repeated briefs, pass recentAssetSlugs or excludeSlugs so fresh mode can rotate comparable candidates. get_example_payload's canned payloads are a last-resort scaffold, not the creative library.`;
 
 const DEVELOPER_INSTRUCTIONS = `For low-level authoring, Zvid renders project JSON into videos and images. Follow the example-first quality workflow — hand-composed layouts are the #1 cause of low-quality output:
@@ -1500,7 +1501,7 @@ export function createZvidServer({
     {
       title: "Create template",
       description:
-        "Create a reusable template from complete project JSON. Read get_project_schema first; every placeholder must have a safe default and video-template scenes need explicit durations. The backend validates the template against this account's plan before saving it. This is also the render path for adapted library examples that use variables/condition/iterate: create_template -> preview_template -> create_render { template, variables }.",
+        "Create a reusable template from complete project JSON. Read get_project_schema first; every placeholder must have a safe default and video-template scenes need explicit durations. The backend validates the template against this account's plan before saving it. This is also the render path for adapted library examples that use variables/condition/iterate: create_template -> preview_template -> create_render { template, variables }. To AUTHOR a reusable template from a user brief (declared variables + {{placeholders}} + credit estimate + editor link), prefer create_media_template.",
       inputSchema: {
         name: z.string().trim().min(1).max(255),
         description: z.string().max(2000).optional(),
