@@ -480,7 +480,7 @@ function buildVisualBaseProperties(
     resize: {
       enum: [...RESIZE_MODES],
       description:
-        "How media fills its box: contain (letterbox) or cover (crop).",
+        "How media fits its frame: contain (letterbox) or cover (center-crop). With explicit width/height the media fits INTO that box (CSS object-fit); without a box it is sized against the full canvas.",
     },
     enterBegin: num(
       0,
@@ -5308,7 +5308,8 @@ const BASE_FIELD_DOCS: ElementFieldDoc[] = [
   {
     name: "resize",
     type: '"contain" | "cover"',
-    description: "How media fills its box.",
+    description:
+      "How media fits its box (with width/height) or the canvas (without).",
   },
   {
     name: "enterBegin / enterEnd",
