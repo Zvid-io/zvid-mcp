@@ -405,6 +405,12 @@ async function discoverLibraryCandidates(
     ];
   }
 
+  nextSteps.push(
+    `TEMPLATE INTENT: if the user asked for a reusable TEMPLATE (replaceable fields, per-product/per-customer personalization), still adapt the candidate above — then parameterize it (keep its declared variables, add one with a safe default per replaceable slot) and call create_media_template with the complete payload instead of ${
+      profile === "creator" ? "create_media" : "create_media/create_render"
+    }. Instantiate later with create_media_from_template { templateId, variables }.`,
+  );
+
   const result: LibraryDiscoveryResult = {
     poolSize: pool.length,
     decision,
@@ -454,7 +460,7 @@ const CREATOR_INSTRUCTIONS = `Zvid Creator uses exact, quality-first project aut
 5. For manually composed payloads, always call validate_project_json with remote: true and fix every error and layout warning.
 6. Call create_media with the original brief and the complete validated payload. Creator rejects calls without payload, so it never improvises a design from the brief. Draft creation does not spend credits.
 7. Review the editor link. Revisions also require a complete validated replacement payload. Call render_media only after the user approves the exact quoted credits, using the returned draftId and quoteToken.
-8. TEMPLATE INTENT: when the user asks for a reusable TEMPLATE, replaceable fields, or a design to personalize per item ("a template for...", "for each product/customer"), do NOT save a static draft. Author a PARAMETERIZED payload — top-level \`variables\` with safe defaults referenced via {{name}} placeholders (see templateAuthoringGuidelines in zvid://authoring/guidelines; start_from_example keeps an example's existing variables) — and call create_media_template. It returns a persistent tpl_ id, the declared variables and an editor link. Instantiate with create_media_from_template { templateId, variables } for an approval-gated draft and quote.
+8. TEMPLATE INTENT: when the user asks for a reusable TEMPLATE, replaceable fields, or a design to personalize per item ("a template for...", "for each product/customer"), do NOT save a static draft — and do NOT skip the library. Follow steps 1-4 exactly as for a draft: plan_creative_video first, adapt the best example via start_from_example (it keeps any variables the example already declares). Then PARAMETERIZE the adapted design — declare a top-level \`variables\` entry with a safe default for every replaceable copy/media/brand slot, referenced via {{name}} placeholders per templateAuthoringGuidelines in zvid://authoring/guidelines — and call create_media_template with the complete parameterized payload. Composing a template layout from scratch when a matching example exists loses the designed quality exactly like it does for drafts. The tool returns a persistent tpl_ id, the declared variables and an editor link. Instantiate with create_media_from_template { templateId, variables } for an approval-gated draft and quote.
 For repeated briefs, pass recentAssetSlugs or excludeSlugs so fresh mode can rotate comparable candidates. get_example_payload's canned payloads are a last-resort scaffold, not the creative library.`;
 
 const DEVELOPER_INSTRUCTIONS = `For low-level authoring, Zvid renders project JSON into videos and images. Follow the example-first quality workflow — hand-composed layouts are the #1 cause of low-quality output:
@@ -1260,8 +1266,8 @@ export function createZvidServer({
         ...(validationNote
           ? { validationNote }
           : { validation: validateProject(payload) }),
-        nextSteps:
-          profile === "creator"
+        nextSteps: [
+          ...(profile === "creator"
             ? [
                 templateRoute
                   ? `EASIEST: pick new variable VALUES (copy, media URLs from search_stock_media, brand colors) and call create_media_from_example { slug: "${slug}", variables } — the server resolves the template features and saves an approval-gated draft with a signed credit quote, no credits spent.`
@@ -1282,7 +1288,11 @@ export function createZvidServer({
                     : "Edit") +
                     " textSlots/mediaSlots in place per the adaptationContract; replace media via search_stock_media (full-quality src, natural size >= the slot).",
                   'validate_project_json (remote: true), fix every error and layout warning, then create_render (or create_image_render when adaptationMap.projectType is "image").',
-                ],
+                ]),
+          adaptationMap.variables.length
+            ? "TEMPLATE INTENT: to save this design as YOUR reusable template, keep its declared variables (add one per remaining replaceable slot) and call create_media_template with the parameterized payload — do not flatten it into a static draft."
+            : "TEMPLATE INTENT: to save this design as YOUR reusable template, parameterize it first — declare `variables` with safe defaults and reference them via {{name}} in the replaceable copy/media/brand slots — then call create_media_template.",
+        ],
       };
     }),
   );

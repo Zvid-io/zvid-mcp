@@ -206,15 +206,24 @@ await step("create_media_template (brief-only fallback)", async () => {
     }),
     "create_media_template",
   );
-  if (res.composition !== "deterministic-fallback") {
+  // Without sampling the server prefers the closest library example that
+  // declares variables and only then the generic type-led template.
+  if (
+    res.composition !== "deterministic-fallback" &&
+    res.composition !== "example-fallback"
+  ) {
     throw new Error(`composition=${res.composition}`);
   }
   fallbackTemplateId = res.templateId;
   const varNames = (res.declaredVariables ?? []).map((v) => v.name);
-  for (const name of ["brandName", "headline", "message", "ctaText"]) {
-    if (!varNames.includes(name)) throw new Error(`missing variable ${name}`);
+  if (res.composition === "deterministic-fallback") {
+    for (const name of ["brandName", "headline", "message", "ctaText"]) {
+      if (!varNames.includes(name)) throw new Error(`missing variable ${name}`);
+    }
+  } else if (!varNames.length) {
+    throw new Error("example-fallback template declared no variables");
   }
-  return `${fallbackTemplateId} vars=[${varNames.join(",")}]`;
+  return `${fallbackTemplateId} (${res.composition}) vars=[${varNames.join(",")}]`;
 });
 
 await step("create_media_from_template substitutes new values", async () => {

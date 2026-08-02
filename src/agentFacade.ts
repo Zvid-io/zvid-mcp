@@ -981,12 +981,15 @@ async function prepareTemplatePayload(
   const canSample = Boolean(
     options.server.server.getClientCapabilities()?.sampling,
   );
-  const composition: "provided" | "sampling" | "deterministic-fallback" =
-    input.payload
-      ? "provided"
-      : canSample
-        ? "sampling"
-        : "deterministic-fallback";
+  let composition:
+    | "provided"
+    | "sampling"
+    | "example-fallback"
+    | "deterministic-fallback" = input.payload
+    ? "provided"
+    : canSample
+      ? "sampling"
+      : "deterministic-fallback";
   let payload = input.payload;
   if (!payload && canSample) {
     payload = await samplePayload(options, {
@@ -994,6 +997,21 @@ async function prepareTemplatePayload(
       templateMode: true,
       referencePayload: context.referencePayload,
     });
+  }
+  if (!payload && context.referencePayload) {
+    // Without sampling, a designed example that already declares variables is
+    // a far better template than the generic type-led fallback — adopt it
+    // verbatim (its defaults become the template defaults).
+    const repaired = repairProject(context.referencePayload)
+      .repaired as Record<string, unknown>;
+    const candidate = { ...repaired, type: input.type };
+    if (
+      buildAdaptationMap(candidate).variables.length > 0 &&
+      templateReadinessIssues(candidate).length === 0
+    ) {
+      payload = candidate;
+      composition = "example-fallback";
+    }
   }
   if (!payload) payload = deterministicFallbackTemplate(input);
   payload = { ...payload, type: input.type };
@@ -1277,8 +1295,8 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
       title: "Create a reusable media template",
       description:
         requiresAuthoredPayload
-          ? "Save a complete PARAMETERIZED project payload as a persistent REUSABLE template (tpl_...) owned by this account. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. The payload must declare a top-level `variables` object of safe defaults referenced via {{name}} placeholders; the backend validates by rendering the defaults and rejects unresolved references and video scenes without explicit durations. Creating a template spends NO credits. Instantiate it later with create_media_from_template { templateId, variables }."
-          : "Turn a natural-language brief (or exact parameterized payload) into a persistent REUSABLE template (tpl_...): a designed project that declares `variables` with safe defaults and references them via {{name}} placeholders, so every instantiation swaps copy, media and brand values without touching the layout. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Spends NO credits. Instantiate with create_media_from_template { templateId, variables }.",
+          ? "Save a complete PARAMETERIZED project payload as a persistent REUSABLE template (tpl_...) owned by this account. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Follow the same example-first workflow as drafts: plan_creative_video, adapt the best example via start_from_example (it keeps existing variables), THEN parameterize — never compose the layout from scratch when an example matches. The payload must declare a top-level `variables` object of safe defaults referenced via {{name}} placeholders; the backend validates by rendering the defaults and rejects unresolved references and video scenes without explicit durations. Creating a template spends NO credits. Instantiate it later with create_media_from_template { templateId, variables }."
+          : "Turn a natural-language brief (or exact parameterized payload) into a persistent REUSABLE template (tpl_...): a designed project that declares `variables` with safe defaults and references them via {{name}} placeholders, so every instantiation swaps copy, media and brand values without touching the layout. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Brief-only calls adapt the best matching library example server-side; for an authored payload, follow the example-first workflow (plan_creative_video, start_from_example) before parameterizing. Spends NO credits. Instantiate with create_media_from_template { templateId, variables }.",
       inputSchema: {
         brief: z
           .string()
@@ -1347,7 +1365,12 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
               qualityNotice:
                 "The connected MCP client does not support sampling, so Zvid created a safe type-led template with standard variables (brandName, headline, message, ctaText, primaryColor). Review it in the editor, or supply an exact parameterized payload for richer composition.",
             }
-          : {}),
+          : prepared.composition === "example-fallback"
+            ? {
+                qualityNotice:
+                  "The connected MCP client does not support sampling, so Zvid adopted the closest matching library example — its declared variables (with the example's content as defaults) are now this template's variables. Review it in the editor, or supply an exact parameterized payload to change the design.",
+              }
+            : {}),
         selectedExample: prepared.candidate,
         creativePlan: prepared.plan,
         nextStep:

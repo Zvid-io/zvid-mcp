@@ -1014,6 +1014,83 @@ test("create_media_template without sampling falls back to a parameterized deter
   );
 });
 
+test("create_media_template without sampling adopts a variable-bearing library example", async () => {
+  const seen: Array<{ method: string; path: string; body?: any }> = [];
+  const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ method: init?.method ?? "GET", path: url.pathname, body });
+    if (url.pathname === "/api/render/creative-plan/api-key") {
+      return Response.json({ directions: [] });
+    }
+    if (url.pathname === "/api/library/examples/shoes-promo-vertical/content") {
+      return Response.json(PARAMETERIZED_PAYLOAD);
+    }
+    if (url.pathname === "/api/library/examples") {
+      return Response.json({
+        items: [
+          {
+            slug: "shoes-promo-vertical",
+            title: "Shoes Promo Vertical",
+            description: "Vertical promo template for shoes and sneakers",
+            meta: { pack: "ecommerce", resolution: "hd", duration: 8, scenes: 2 },
+          },
+        ],
+      });
+    }
+    if (url.pathname === "/api/render/validate/api-key") {
+      return Response.json({
+        valid: true,
+        creditsRequired: 6,
+        payload: body.payload,
+        warnings: [],
+      });
+    }
+    if (url.pathname === "/api/templates" && init?.method === "POST") {
+      return Response.json(
+        {
+          template: {
+            id: TEMPLATE_ID,
+            name: body.name,
+            project: body.payload,
+            type: "video",
+            variablesSummary: VARIABLES_SUMMARY,
+            version: 1,
+          },
+        },
+        { status: 201 },
+      );
+    }
+    return Response.json(
+      { error: "NOT_FOUND", message: url.pathname },
+      { status: 404 },
+    );
+  }) as typeof fetch;
+
+  const client = await creatorClient(fetchImpl);
+  const created = firstJson(
+    await client.callTool({
+      name: "create_media_template",
+      arguments: {
+        brief: "Vertical promo template for shoes and sneakers",
+        type: "video",
+      },
+    }),
+  );
+
+  assert.equal(created.composition, "example-fallback");
+  assert.match(created.qualityNotice, /library example/);
+  assert.equal(created.selectedExample.slug, "shoes-promo-vertical");
+  const saveCall = seen.find(
+    (call) => call.path === "/api/templates" && call.method === "POST",
+  );
+  assert.deepEqual(
+    saveCall?.body.payload.variables,
+    PARAMETERIZED_PAYLOAD.variables,
+    "the example's declared variables must become the template's variables",
+  );
+});
+
 test("create_media_from_template resolves variables into a quoted draft and keeps the template", async () => {
   const RESOLVED = {
     ...PARAMETERIZED_PAYLOAD,
