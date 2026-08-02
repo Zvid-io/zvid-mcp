@@ -6,18 +6,36 @@
 
 Official [Zvid](https://zvid.io) agent and MCP server. Creator follows a quality-first workflow: plan the brief, adapt designed examples or library assets, validate exact project JSON, save a reviewable draft, then render only after approval. Automation and Developer add trusted direct operations.
 
-## Requirements
+## Authentication
 
-- Hosted OAuth: a Zvid account and any OAuth-capable Streamable HTTP MCP client
-- Local stdio: Node.js ≥ 18 and a Zvid API key
+There are exactly two ways to authenticate. Every setup below uses one of them:
+
+| # | Method | Works with | What you need |
+| --- | --- | --- | --- |
+| 1 | **OAuth — sign in with your Zvid account** (recommended) | Hosted endpoint `https://mcp.zvid.io/mcp` | A Zvid account and any OAuth-capable Streamable HTTP MCP client. No API key to create or paste. |
+| 2 | **API key** (`zvid_…`) | Hosted endpoint via the `X-Api-Key` header, or local stdio / self-hosted | A key from [app.zvid.io/api-keys](https://app.zvid.io/api-keys); Node.js ≥ 18 for stdio |
+
+**Method 1 — OAuth sign-in.** Add `https://mcp.zvid.io/mcp` to your MCP client
+and sign in when prompted. The endpoint publishes OAuth discovery metadata,
+uses authorization code + PKCE with the single scope `zvid:mcp`, and issues
+short-lived access tokens with rotating refresh tokens (revocable per
+RFC 7009). This is what the client-specific instructions below use.
+
+**Method 2 — API key.** Create a key at
+[app.zvid.io/api-keys](https://app.zvid.io/api-keys), then either:
+
+- **Hosted:** send it in the `X-Api-Key` header on `https://mcp.zvid.io/mcp` —
+  for programmatic clients that cannot run an OAuth flow, or legacy access.
+- **Local stdio / self-hosted:** pass it via `ZVID_API_KEY` / `--api-key` as
+  shown in [Local stdio / self-hosted setup](#local-stdio--self-hosted-setup).
+  The stdio transport is API-key only, because MCP OAuth is defined for HTTP
+  transports.
 
 ## Hosted setup (recommended)
 
-The hosted endpoint is `https://mcp.zvid.io/mcp`. It publishes OAuth discovery
-metadata, uses authorization code + PKCE, and issues short-lived access tokens
-with rotating refresh tokens. Most users just sign in to Zvid — no API key to
-create or paste. The hosted endpoint also accepts a Zvid API key via the
-`X-Api-Key` header for legacy or programmatic access.
+The hosted endpoint is `https://mcp.zvid.io/mcp`. It accepts both
+authentication methods: OAuth sign-in (method 1 — used by the client
+instructions below) and an API key in the `X-Api-Key` header (method 2).
 
 ### Claude Code
 
@@ -41,7 +59,7 @@ scopes = ["zvid:mcp"]
 oauth_resource = "https://mcp.zvid.io/mcp"
 ```
 
-OAuth uses one scope, `zvid:mcp`. The dashboard stores the default tool profile
+The dashboard stores the default tool profile
 and maximum credits per render for MCP clients. A client may connect with
 concrete values in the endpoint, for example
 `https://mcp.zvid.io/mcp?profile=creator&maxRenderCredits=60`; this is connection
@@ -56,8 +74,8 @@ credit ceiling locally without updating the dashboard or any other workflow.
 
 ## Local stdio / self-hosted setup
 
-The npm/stdio entry point remains API-key based because OAuth is defined for
-HTTP transports. Configuration resolution is CLI flags, then environment, then
+The npm/stdio entry point uses an API key (authentication method 2).
+Configuration resolution is CLI flags, then environment, then
 `~/.zvid-mcp.json`:
 
 ```bash
@@ -106,6 +124,17 @@ layout from a brief. The agent must plan, adapt or assemble an exact payload,
 validate it remotely, fix every error and layout warning, and only then save the
 draft. `create_media` remains non-spending; `render_media` still requires the
 user-approved signed quote.
+
+When the user asks for a reusable **template** rather than a one-off video or
+image, `create_media_template` saves a parameterized project — a top-level
+`variables` object of safe defaults referenced via `{{name}}` placeholders —
+as a persistent `tpl_…` template. It returns the declared variables, a credit
+estimate for rendering the untouched defaults, and an editor deep link
+(`https://editor.zvid.io/?template=<id>`). `create_media_from_template` then
+instantiates the template with new variable values as an approval-gated draft
+with a signed quote. Neither call spends credits. In the `creator` profile
+`create_media_template` requires the complete parameterized payload, mirroring
+`create_media`.
 
 Rendering is deliberately separate from drafting. Quote tokens are
 HMAC-signed, expire after 15 minutes, bind the draft ID, project version,
