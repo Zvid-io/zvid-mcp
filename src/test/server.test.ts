@@ -187,6 +187,7 @@ test("advertises the example-first workflow as server instructions", async () =>
   assert.match(instructions!, /start_from_example/);
   assert.match(instructions!, /render_from_example/);
   assert.match(instructions!, /validate_project_json/);
+  assert.match(instructions!, /never poll/i);
 });
 
 test("get_render calls GET /api/jobs/:id and returns the job", async () => {
@@ -209,6 +210,47 @@ test("get_render calls GET /api/jobs/:id and returns the job", async () => {
   const content = result.content as { type: string; text: string }[];
   const body = JSON.parse(content[0].text);
   assert.equal(body.state, "completed");
+  assert.equal(body.doNotPoll, undefined, "terminal jobs carry no guidance");
+});
+
+test("in-flight status checks carry an explicit do-not-poll instruction", async () => {
+  const fetchImpl = (async (input: URL | RequestInfo) => {
+    const url = new URL(String(input));
+    if (url.pathname.startsWith("/api/render/bulk/")) {
+      return Response.json({
+        bulk: { id: "blk_1", status: "processing", counts: { pending: 3 } },
+        jobs: [],
+      });
+    }
+    return Response.json({ id: "job-2", state: "active", progress: 40 });
+  }) as typeof fetch;
+
+  const client = await connectedClient(fetchImpl);
+  const job = JSON.parse(
+    (
+      (
+        await client.callTool({
+          name: "get_render",
+          arguments: { jobId: "job-2" },
+        })
+      ).content as { text: string }[]
+    )[0].text,
+  );
+  assert.equal(job.stillRendering, true);
+  assert.match(job.doNotPoll, /Do NOT call the status tool again/);
+
+  const bulk = JSON.parse(
+    (
+      (
+        await client.callTool({
+          name: "get_bulk_render",
+          arguments: { bulkId: "blk_1" },
+        })
+      ).content as { text: string }[]
+    )[0].text,
+  );
+  assert.equal(bulk.stillRendering, true);
+  assert.match(bulk.doNotPoll, /webhooks/);
 });
 
 test("create_render rejects payload+template together without calling the API", async () => {

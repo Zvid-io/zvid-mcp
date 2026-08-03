@@ -1636,7 +1636,7 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
         mediaType: quote.mediaType,
         creditsQuoted: quote.estimatedCredits,
         render,
-        nextStep: `Call get_media with mediaId "${jobId}" to monitor progress.`,
+        nextStep: `The render runs in the BACKGROUND. Do NOT poll get_media in a loop — report jobId "${jobId}" to the user and finish your reply. Call get_media once later only when the user asks for the result; automation should use webhooks (render.completed / render.failed) instead of status checks.`,
       };
     }),
   );
@@ -1646,7 +1646,7 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     {
       title: "Get a Zvid draft or render",
       description:
-        "Get one saved draft (prj_...) with a fresh signed render quote, or one render job by ID. Draft payloads are omitted unless includePayload is true.",
+        "Get one saved draft (prj_...) with a fresh signed render quote, or one render job by ID. Draft payloads are omitted unless includePayload is true. For render jobs this is a ONE-SHOT status check — never call it in a waiting loop; renders complete in the background, so check once when the user asks for the result.",
       inputSchema: {
         mediaId: z.string().trim().min(1),
         includePayload: z.boolean().default(false),
@@ -1660,11 +1660,21 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     },
     guarded(async ({ mediaId, includePayload }) => {
       if (!PROJECT_ID_RE.test(mediaId)) {
+        const render = (await options.client.get(
+          `/api/jobs/${encodeURIComponent(mediaId)}`,
+        )) as Record<string, unknown>;
+        const state = String(render.state ?? render.status ?? "").toLowerCase();
+        const terminal = ["completed", "failed", "cancelled"].includes(state);
         return {
           kind: "render",
-          render: await options.client.get(
-            `/api/jobs/${encodeURIComponent(mediaId)}`,
-          ),
+          render,
+          ...(terminal
+            ? {}
+            : {
+                stillRendering: true,
+                doNotPoll:
+                  "This render is still processing in the background. Do NOT call get_media again in a loop — finish your reply now and check once later only when the user asks, or rely on webhooks for automation.",
+              }),
         };
       }
       const project = await getProject(options.client, mediaId);

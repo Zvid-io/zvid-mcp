@@ -121,6 +121,35 @@ async function liveAuthoringOrFallback<T>(
   }
 }
 
+const TERMINAL_RENDER_STATES = new Set([
+  "completed",
+  "failed",
+  "cancelled",
+  "completed_with_errors",
+]);
+
+/**
+ * Status-check results for jobs/batches that are still queued/rendering carry
+ * an explicit do-not-poll instruction. Agents that busy-wait on renders burn
+ * tokens and time out workflow runs; the default contract is fire-and-forget
+ * with webhooks (or one later check on user request).
+ */
+function withNoPollGuidance(
+  response: Record<string, unknown>,
+): Record<string, unknown> {
+  const bulk = response.bulk as Record<string, unknown> | undefined;
+  const state = String(
+    response.state ?? response.status ?? bulk?.status ?? "",
+  ).toLowerCase();
+  if (TERMINAL_RENDER_STATES.has(state)) return response;
+  return {
+    ...response,
+    stillRendering: true,
+    doNotPoll:
+      "This render is still processing in the background. Do NOT call the status tool again in a loop — finish your reply now (report the jobId) and check once later only when the user asks, or rely on webhooks (render.completed / render.failed) for automation.",
+  };
+}
+
 /** Wrap an async handler so Zvid API errors surface as MCP tool errors. */
 function handler<A>(fn: (args: A) => Promise<unknown>) {
   return async (args: A) => {
@@ -460,6 +489,7 @@ const CREATOR_INSTRUCTIONS = `Zvid Creator uses exact, quality-first project aut
 5. For manually composed payloads, always call validate_project_json with remote: true and fix every error and layout warning.
 6. Call create_media with the original brief and the complete validated payload. Creator rejects calls without payload, so it never improvises a design from the brief. Draft creation does not spend credits.
 7. Review the editor link. Revisions also require a complete validated replacement payload. Call render_media only after the user approves the exact quoted credits, using the returned draftId and quoteToken.
+7b. Renders are ASYNCHRONOUS. After render_media (or any render call) report the jobId and FINISH YOUR REPLY — never poll status in a loop; repeated status calls burn tokens and time out agent runs. Check status once, only when the user asks for the result. For unattended automation, have completion pushed instead: webhookUrl on the render call or create_webhook (render.completed / render.failed).
 8. TEMPLATE INTENT: when the user asks for a reusable TEMPLATE, replaceable fields, or a design to personalize per item ("a template for...", "for each product/customer"), do NOT save a static draft — and do NOT skip the library. Follow steps 1-4 exactly as for a draft: plan_creative_video first, adapt the best example via start_from_example (it keeps any variables the example already declares). Then PARAMETERIZE the adapted design — declare a top-level \`variables\` entry with a safe default for every replaceable copy/media/brand slot, referenced via {{name}} placeholders per templateAuthoringGuidelines in zvid://authoring/guidelines — and call create_media_template with the complete parameterized payload. Composing a template layout from scratch when a matching example exists loses the designed quality exactly like it does for drafts. The tool returns a persistent tpl_ id, the declared variables and an editor link. Instantiate with create_media_from_template { templateId, variables } for an approval-gated draft and quote.
 For repeated briefs, pass recentAssetSlugs or excludeSlugs so fresh mode can rotate comparable candidates. get_example_payload's canned payloads are a last-resort scaffold, not the creative library.`;
 
@@ -588,7 +618,7 @@ export function createZvidServer({
     {
       title: "Create video render",
       description:
-        "Queue a video render. Provide either a full project JSON as `payload` or a `template` ID (optionally with `variables`). Returns a jobId to poll with get_render. Credits are reserved up front. For NEW creative content do not hand-compose the payload: run plan_creative_video (or find_matching_examples) first and adapt a library example via start_from_example, then validate_project_json before rendering.",
+        "Queue a video render. Provide either a full project JSON as `payload` or a `template` ID (optionally with `variables`). Returns a jobId immediately; the render completes in the BACKGROUND — do NOT poll get_render in a loop (report the jobId and finish; check once when the user asks, or pass webhookUrl to have render.completed/render.failed pushed). Credits are reserved up front. For NEW creative content do not hand-compose the payload: run plan_creative_video (or find_matching_examples) first and adapt a library example via start_from_example, then validate_project_json before rendering.",
       inputSchema: renderEnvelopeShape,
     },
     handler(async (args) => {
@@ -602,7 +632,7 @@ export function createZvidServer({
     {
       title: "Create image render",
       description:
-        'Queue a still-image render (PNG/JPEG) from a project JSON or an image-type template. Overrides support snapshotTime, quality and transparent. Returns a jobId to poll with get_render. For NEW creative stills, first run find_matching_examples with type: "image" and adapt a library example via start_from_example instead of composing from scratch.',
+        'Queue a still-image render (PNG/JPEG) from a project JSON or an image-type template. Overrides support snapshotTime, quality and transparent. Returns a jobId immediately; the render completes in the BACKGROUND — do NOT poll get_render in a loop (check once when the user asks, or pass webhookUrl for push notification). For NEW creative stills, first run find_matching_examples with type: "image" and adapt a library example via start_from_example instead of composing from scratch.',
       inputSchema: renderEnvelopeShape,
     },
     handler(async (args) => {
@@ -616,7 +646,7 @@ export function createZvidServer({
     {
       title: "Get render status",
       description:
-        "Get a render job's state (waiting|active|completed|failed), progress (0-100), and — when completed — the output url and thumbnailUrl.",
+        "Get a render job's state (waiting|active|completed|failed), progress (0-100), and — when completed — the output url and thumbnailUrl. ONE-SHOT status check: never call it in a waiting loop — renders complete in the background; check once when the user asks, or receive render.completed/render.failed via webhooks.",
       inputSchema: {
         jobId: z
           .string()
@@ -625,8 +655,12 @@ export function createZvidServer({
           ),
       },
     },
-    handler(({ jobId }) =>
-      client.get(`/api/jobs/${encodeURIComponent(jobId)}`),
+    handler(async ({ jobId }) =>
+      withNoPollGuidance(
+        (await client.get(
+          `/api/jobs/${encodeURIComponent(jobId)}`,
+        )) as Record<string, unknown>,
+      ),
     ),
   );
 
@@ -1180,7 +1214,7 @@ export function createZvidServer({
             }
           : {}),
         nextSteps: [
-          "Poll get_render with the returned jobId until completed.",
+          "The render completes in the background — do NOT poll get_render in a loop. Report the jobId and finish your reply; check get_render once later only when the user asks, or attach a webhook for render.completed.",
           `Re-render variations cheaply with create_render { template: "${templateId}", variables } — or delete_template when done with it.`,
         ],
       };
@@ -1414,7 +1448,7 @@ export function createZvidServer({
     "create_bulk_render",
     {
       title: "Create bulk render",
-      description: `Queue N renders from one template/payload and a list of per-item variable sets (MCP safety max ${maxBulkItems}; the API and plan may impose lower limits). Validation is best-effort per item: valid items queue, invalid ones are reported in the errors array (each entry keyed by original item index). Returns bulkId + jobIds.`,
+      description: `Queue N renders from one template/payload and a list of per-item variable sets (MCP safety max ${maxBulkItems}; the API and plan may impose lower limits). Validation is best-effort per item: valid items queue, invalid ones are reported in the errors array (each entry keyed by original item index). Returns bulkId + jobIds immediately; the batch completes in the BACKGROUND — do NOT poll get_bulk_render in a loop. Attach webhookUrl (or create_webhook) to receive per-job render.completed/render.failed events, or check the batch once when the user asks.`,
       inputSchema: {
         kind: z
           .enum(["video", "image"])
@@ -1460,13 +1494,17 @@ export function createZvidServer({
     {
       title: "Get bulk render",
       description:
-        "Get a bulk render batch by ID (blk_...) including its jobs' states.",
+        "Get a bulk render batch by ID (blk_...) including its jobs' states. ONE-SHOT status check: never call it in a waiting loop — batches complete in the background; check once when the user asks, or use webhooks for per-job completion events.",
       inputSchema: {
         bulkId: z.string().describe('Bulk render ID, e.g. "blk_..."'),
       },
     },
-    handler(({ bulkId }) =>
-      client.get(`/api/render/bulk/${encodeURIComponent(bulkId)}`),
+    handler(async ({ bulkId }) =>
+      withNoPollGuidance(
+        (await client.get(
+          `/api/render/bulk/${encodeURIComponent(bulkId)}`,
+        )) as Record<string, unknown>,
+      ),
     ),
   );
 

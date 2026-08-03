@@ -180,6 +180,11 @@ test("create_media saves a validated draft and render_media spends only the sign
     }),
   );
   assert.equal(rendered.jobId, idempotencyKey);
+  assert.match(
+    rendered.nextStep,
+    /Do NOT poll/,
+    "render results must steer agents away from busy-waiting",
+  );
   const renderCall = seen.find(
     (call) => call.path === "/api/render/image/api-key",
   );
