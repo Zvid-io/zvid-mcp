@@ -256,6 +256,9 @@ export const WEBHOOK_EVENTS = ["render.completed", "render.failed"] as const;
 export const HEX_COLOR = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 export const HEX_COLOR_ALPHA = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/;
 export const NAME_REGEX = /^[a-zA-Z0-9_\- ]+$/;
+const HUE_ROTATE_DEGREES = /^-?(?:\d+(?:\.\d+)?|\.\d+)(?:deg)?$/;
+const BLUR_NUMERIC_STRING =
+  /^(?:0*(?:100(?:\.0+)?|\d{1,2}(?:\.\d+)?|\.\d+))$/;
 export const ID_REGEX = /^[a-zA-Z0-9_-]+$/;
 export const TEMPLATE_ID_REGEX = /^tpl_[A-Za-z0-9]{20}$/;
 
@@ -550,9 +553,23 @@ function buildMediaSharedDefs(limits: PlanLimits): Record<string, JsonSchema> {
         brightness: num(-100, 100),
         contrast: num(-100, 100),
         saturate: num(-100, 100),
-        "hue-rotate": { type: "string", description: 'e.g. "90deg"' },
-        blur: { type: "string", description: 'e.g. "4px"' },
-        invert: { type: "boolean" },
+        "hue-rotate": {
+          type: "string",
+          pattern: HUE_ROTATE_DEGREES.source,
+          description: 'Degrees, preferably with a "deg" suffix (e.g. "90deg"). Legacy numeric strings such as "90" remain accepted.',
+        },
+        blur: {
+          description:
+            "Unitless 0..100 amount. Numeric strings remain accepted for backward compatibility; CSS lengths such as 4px are not supported.",
+          anyOf: [
+            num(0, 100),
+            { type: "string", pattern: BLUR_NUMERIC_STRING.source },
+          ],
+        },
+        invert: {
+          description: "Boolean or partial inversion amount from 0 to 1.",
+          anyOf: [{ type: "boolean" }, num(0, 1)],
+        },
         colorTint: hexColorSchema("Tint color (#rgb or #rrggbb)."),
       },
       additionalProperties: false,
@@ -686,7 +703,7 @@ export function buildProjectJsonSchema(
         limits.maxDuration,
         "Play only this many seconds of the source.",
       ),
-      volume: num(0, 1, "Clip audio volume, 0..1."),
+      volume: num(0, 2, "Clip audio volume, 0..2 (1 = original level)."),
       speed: num(0.1, 10, "Playback speed multiplier, 0.1..10."),
       transition: {
         anyOf: [{ enum: [...XFADE_EFFECTS] }, { type: "null" }],
@@ -810,7 +827,7 @@ export function buildProjectJsonSchema(
         limits.maxOutputResolution,
         "Timeline second the audio stops. Must be >= enter.",
       ),
-      volume: num(0, 1),
+      volume: num(0, 2),
       speed: num(0.1, 10),
       audioBegin: num(
         0,
@@ -3038,21 +3055,38 @@ function validateMediaExtras(ctx: Ctx, f: string, v: Record<string, unknown>) {
       }
       if (
         fl["hue-rotate"] !== undefined &&
-        typeof fl["hue-rotate"] !== "string"
+        (typeof fl["hue-rotate"] !== "string" ||
+          !HUE_ROTATE_DEGREES.test(fl["hue-rotate"]))
       )
         err(
           ctx,
           `${f}.filter.hue-rotate`,
           `${f}.filter.hue-rotate must be a string like "90deg"`,
         );
-      if (fl.blur !== undefined && typeof fl.blur !== "string")
-        err(
-          ctx,
-          `${f}.filter.blur`,
-          `${f}.filter.blur must be a string like "4px"`,
-        );
+      if (fl.blur !== undefined) {
+        const blurValue =
+          isNum(fl.blur)
+            ? fl.blur
+            : typeof fl.blur === "string" && BLUR_NUMERIC_STRING.test(fl.blur)
+              ? Number(fl.blur)
+              : undefined;
+        if (blurValue === undefined)
+          err(
+            ctx,
+            `${f}.filter.blur`,
+            `${f}.filter.blur must be a unitless number from 0 to 100 (numeric strings are accepted)`,
+          );
+        else
+          checkNumber(ctx, `${f}.filter.blur`, blurValue, {
+            min: 0,
+            max: 100,
+          });
+      }
       if (fl.invert !== undefined && typeof fl.invert !== "boolean")
-        err(ctx, `${f}.filter.invert`, `${f}.filter.invert must be a boolean`);
+        checkNumber(ctx, `${f}.filter.invert`, fl.invert, {
+          min: 0,
+          max: 1,
+        });
       if (fl.colorTint !== undefined)
         checkHex(ctx, `${f}.filter.colorTint`, fl.colorTint);
       checkUnknownKeys(
@@ -3453,7 +3487,7 @@ function validateVisual(
           max: L.maxDuration,
         });
       if (visual.volume !== undefined)
-        checkNumber(ctx, `${f}.volume`, visual.volume, { min: 0, max: 1 });
+        checkNumber(ctx, `${f}.volume`, visual.volume, { min: 0, max: 2 });
       if (visual.speed !== undefined)
         checkNumber(ctx, `${f}.speed`, visual.speed, { min: 0.1, max: 10 });
       if (visual.transition !== undefined)
@@ -3594,7 +3628,7 @@ function validateAudio(ctx: Ctx, f: string, a: unknown) {
       max: L.maxOutputResolution,
     });
   if (a.volume !== undefined)
-    checkNumber(ctx, `${f}.volume`, a.volume, { min: 0, max: 1 });
+    checkNumber(ctx, `${f}.volume`, a.volume, { min: 0, max: 2 });
   if (a.speed !== undefined)
     checkNumber(ctx, `${f}.speed`, a.speed, { min: 0.1, max: 10 });
   if (a.audioBegin !== undefined)
@@ -5143,7 +5177,7 @@ export function repairProject(
       clampField(v, "opacity", `${field}.opacity`, 0, 1);
       clampField(v, "angle", `${field}.angle`, -360, 360);
       if (t === "VIDEO") {
-        clampField(v, "volume", `${field}.volume`, 0, 1);
+        clampField(v, "volume", `${field}.volume`, 0, 2);
         clampField(v, "speed", `${field}.speed`, 0.1, 10);
       }
       out.push(v);
@@ -5192,7 +5226,7 @@ export function repairProject(
           });
         }
       }
-      clampField(a, "volume", `${field}.volume`, 0, 1);
+      clampField(a, "volume", `${field}.volume`, 0, 2);
       clampField(a, "speed", `${field}.speed`, 0.1, 10);
       if (isNum(a.enter) && isNum(a.exit) && a.exit < a.enter) {
         [a.enter, a.exit] = [a.exit, a.enter];
@@ -5362,7 +5396,7 @@ const MEDIA_FIELD_DOCS: ElementFieldDoc[] = [
     name: "filter",
     type: "object",
     description:
-      "brightness/contrast/saturate (-100..100), hue-rotate/blur (strings), invert, colorTint (#hex).",
+      "brightness/contrast/saturate (-100..100), hue-rotate (degree string), blur (unitless 0..100), invert (boolean or 0..1), colorTint (#rgb/#rrggbb).",
   },
   {
     name: "chromaKey",
@@ -5429,7 +5463,7 @@ export function getElementDocs(type: string): ElementDoc | undefined {
         },
         {
           name: "volume",
-          type: "number 0..1",
+          type: "number 0..2",
           description: "Clip audio volume.",
         },
         {
@@ -5624,7 +5658,7 @@ export function getElementDocs(type: string): ElementDoc | undefined {
         },
         {
           name: "volume",
-          type: "number 0..1",
+          type: "number 0..2",
           description: "Playback volume.",
         },
         {
