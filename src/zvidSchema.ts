@@ -1042,7 +1042,12 @@ export function buildProjectJsonSchema(
     description:
       "A timeline segment. Scenes play sequentially; a scene's `transition` blends into the NEXT scene (xfade overlap is subtracted from the total duration).",
     properties: {
-      id: { type: "string", pattern: ID_REGEX.source, maxLength: MAX_ID_LEN },
+      id: {
+        type: "string",
+        pattern: ID_REGEX.source,
+        maxLength: MAX_ID_LEN,
+        description: "Optional scene ID. Explicit IDs must be unique within the project.",
+      },
       duration: {
         description:
           "Seconds; -1 (or omitted) auto-computes from the scene's content.",
@@ -4597,6 +4602,7 @@ export function validateProject(
           `Max scenes allowed is ${L.maxScenes} (based on your ${L.planName} plan)`,
         );
       }
+      const sceneIds = new Set<string>();
       p.scenes.forEach((s: unknown, i: number) => {
         const sf = `scenes[${i}]`;
         if (!isObj(s)) {
@@ -4605,6 +4611,12 @@ export function validateProject(
         }
         validScenes.push(s);
         checkUnknownKeys(ctx, sf, s, SCENE_KEYS);
+        if (typeof s.id === "string") {
+          if (sceneIds.has(s.id)) {
+            err(ctx, `${sf}.id`, `Duplicate scene id "${s.id}".`);
+          }
+          sceneIds.add(s.id);
+        }
         if (
           s.id !== undefined &&
           (typeof s.id !== "string" ||
