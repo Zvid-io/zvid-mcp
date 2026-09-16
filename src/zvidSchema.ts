@@ -817,6 +817,11 @@ export function buildProjectJsonSchema(
       "A soundtrack / voice-over entry for `audios` (video projects only).",
     properties: {
       src: urlSchema("Audio file URL (mp3/wav/...)."),
+      matchDuration: {
+        type: "boolean",
+        description:
+          "Follow the containing scene/project length without extending automatic duration. Overrides exit.",
+      },
       enter: num(
         0,
         limits.maxOutputResolution,
@@ -1118,9 +1123,14 @@ export function buildProjectJsonSchema(
       duration: num(
         0.1,
         limits.maxDuration,
-        "Video length in seconds (plan-limited). Ignored/auto-computed when every scene has an explicit duration.",
+        "Video length in seconds (plan-limited). With durationMode auto this is an optional minimum. Scene projects always include the full scene sequence.",
         { default: 10 },
       ),
+      durationMode: {
+        enum: ["auto", "fixed"],
+        description:
+          "Auto derives length from scenes, explicit element ends and captions. Supply videoEnd/exitEnd and audioEnd/exit for API submission. Omit to preserve legacy timing.",
+      },
       frameRate: int(1, 60, "Frames per second.", { default: 30 }),
       outputFormat: {
         type: "string",
@@ -1175,6 +1185,7 @@ export function buildProjectJsonSchema(
         then: {
           properties: {
             duration: false,
+            durationMode: false,
             frameRate: false,
             audios: false,
             scenes: false,
@@ -1303,7 +1314,7 @@ export const VALIDATION_NOTES: string[] = [
   'Image projects (type: "image") forbid: duration, frameRate, audios, scenes, thumbnail, subtitle; VIDEO/GIF elements; and per-element timing fields (enterBegin/enterEnd/exitBegin/exitEnd, videoBegin/videoEnd/videoDuration, transition/transitionId/transitionDuration).',
   "Image format rules: `transparent: true` is invalid with jpg/jpeg output; `quality` is invalid with png (jpg/webp only).",
   'If `resolution` is set to any preset except "custom", width and height are IGNORED (the preset wins).',
-  "When EVERY scene has an explicit duration > 0, the total (sum minus xfade transition overlaps, default overlap 0.5s) must not exceed the plan's maxDuration; the project `duration` is then auto-set to that total.",
+  "When EVERY scene has an explicit duration > 0, the total (sum minus xfade transition overlaps, default 0.5s) must fit maxDuration. Project duration is the greater of this total and an explicit root duration. durationMode auto also includes timed global elements and captions; provide media trim/end times before API submission.",
   "A scene's `transition` only applies when the scene is not last and `transitionId` is omitted/null/'none'/equal to the next scene's id; otherwise it's a hard cut.",
   "TEXT elements must have non-empty `text` and/or `html` (after trimming).",
   "URL fields (src, thumbnail, subtitle.src) are SSRF-checked: public http(s) only, max 2048 chars, no user:pass@, explicit ports other than 80/443 rejected, localhost/.local/.localhost and private/link-local IP literals rejected. DNS is re-checked at fetch time, so a URL that validates can still fail to download.",
@@ -2325,10 +2336,7 @@ export function rotateComparableCandidates(
   if (pick.slug === best.slug) {
     return { candidates, rotated: false, comparableCount: band.length };
   }
-  const reordered = [
-    pick,
-    ...candidates.filter((c) => c.slug !== pick.slug),
-  ];
+  const reordered = [pick, ...candidates.filter((c) => c.slug !== pick.slug)];
   return { candidates: reordered, rotated: true, comparableCount: band.length };
 }
 
@@ -2355,7 +2363,7 @@ export const ADAPTATION_CONTRACT: string[] = [
  */
 export const TEMPLATE_AUTHORING_GUIDELINES: string[] = [
   "Declare a top-level `variables` object. Every genuinely replaceable value — brand name, headline, body copy, product names, prices, CTA label, media URLs, logo URL, accent colors — gets ONE variable with a safe literal default that renders correctly as-is.",
-  "Reference variables as {{name}} inside string fields (HTML copy, text, src URLs, color values). A field whose entire value is \"{{name}}\" takes the variable's raw typed value; placeholders embedded in longer strings are interpolated as text.",
+  'Reference variables as {{name}} inside string fields (HTML copy, text, src URLs, color values). A field whose entire value is "{{name}}" takes the variable\'s raw typed value; placeholders embedded in longer strings are interpolated as text.',
   "Every {{reference}} MUST have a matching declared default — template validation resolves the project with defaults only and rejects unresolved variables.",
   "Variables parameterize CONTENT, never structure: positions, sizes, widths/heights, animations, timings, transitions, scene layout and font sizes stay literal so every instantiation keeps the designed layout.",
   "Video templates must declare an explicit numeric duration > 0 on every scene — template validation requires it (variable-length media cannot drive scene timing in a template).",
@@ -3598,6 +3606,7 @@ function validateVisual(
 
 const AUDIO_KEYS = new Set([
   "src",
+  "matchDuration",
   "enter",
   "exit",
   "volume",
@@ -3615,6 +3624,8 @@ function validateAudio(ctx: Ctx, f: string, a: unknown) {
   }
   const L = ctx.limits;
   checkUnknownKeys(ctx, f, a, AUDIO_KEYS);
+  if (a.matchDuration !== undefined && typeof a.matchDuration !== "boolean")
+    err(ctx, `${f}.matchDuration`, "matchDuration must be a boolean");
   if (a.src !== undefined) checkUrlField(ctx, `${f}.src`, a.src);
   else
     warn(
@@ -4376,6 +4387,71 @@ function lintContainer(
   }
 }
 
+/** Resolve automatic timing before admission/credit estimation. Unknown source
+ * lengths must be supplied as trim ends; the editor resolves these before submit. */
+export function resolveAutomaticDuration(
+  project: Record<string, any>,
+): Record<string, any> {
+  const contentEnd = (container: Record<string, any>) => {
+    const ends: number[] = [];
+    for (const item of container.visuals || []) {
+      if (typeof item.exitEnd === "number") ends.push(item.exitEnd);
+      else if (String(item.type).toUpperCase() === "VIDEO") {
+        if (typeof item.videoEnd !== "number")
+          throw new Error(
+            "Automatic duration needs videoEnd or exitEnd for each video. Set an end time before submitting.",
+          );
+        ends.push(
+          (item.enterBegin || 0) +
+            (item.videoEnd - (item.videoBegin || 0)) / (item.speed || 1),
+        );
+      }
+    }
+    for (const item of container.audios || []) {
+      if (item.matchDuration) continue;
+      if (typeof item.exit === "number") ends.push(item.exit);
+      else {
+        if (typeof item.audioEnd !== "number")
+          throw new Error(
+            "Automatic duration needs audioEnd or exit for each audio clip, or matchDuration: true.",
+          );
+        ends.push(
+          (item.enter || 0) +
+            (item.audioEnd - (item.audioBegin || 0)) / (item.speed || 1),
+        );
+      }
+    }
+    return (
+      Math.round(
+        Math.max(0, ...ends.filter((n) => Number.isFinite(n) && n > 0)) * 100,
+      ) / 100
+    );
+  };
+  const scenes = (project.scenes || []).map((scene: Record<string, any>) => ({
+    ...scene,
+    duration:
+      typeof scene.duration === "number" && scene.duration > 0
+        ? scene.duration
+        : contentEnd(scene) || 10,
+  }));
+  const sceneEnd = scenes.length ? computeScenesTotalDuration(scenes) : 0;
+  const captions = project.subtitle?.captions || [];
+  const end =
+    Math.max(
+      project.duration || 0,
+      sceneEnd,
+      contentEnd(project),
+      0,
+      ...captions.map((c: any) => c.end).filter(Number.isFinite),
+    ) || 10;
+  return {
+    ...project,
+    durationMode: "fixed",
+    duration: end,
+    ...(scenes.length ? { scenes } : {}),
+  };
+}
+
 const PROJECT_KEYS = new Set([
   "type",
   "name",
@@ -4383,6 +4459,7 @@ const PROJECT_KEYS = new Set([
   "width",
   "height",
   "duration",
+  "durationMode",
   "frameRate",
   "outputFormat",
   "backgroundColor",
@@ -4400,6 +4477,7 @@ const PROJECT_KEYS = new Set([
 
 const IMAGE_FORBIDDEN_TOP = [
   "duration",
+  "durationMode",
   "frameRate",
   "audios",
   "scenes",
@@ -4542,6 +4620,8 @@ export function validateProject(
         min: 0.1,
         max: L.maxDuration,
       });
+    if (p.durationMode !== undefined)
+      checkEnum(ctx, "durationMode", p.durationMode, ["auto", "fixed"]);
     if (p.frameRate !== undefined)
       checkNumber(ctx, "frameRate", p.frameRate, {
         min: 1,
@@ -4715,6 +4795,20 @@ export function validateProject(
           );
         }
       }
+    }
+  }
+
+  if (!isImage && p.durationMode === "auto" && ctx.errors.length === 0) {
+    try {
+      const resolved = resolveAutomaticDuration(p);
+      if (resolved.duration > L.maxDuration)
+        err(
+          ctx,
+          "duration",
+          `Content duration (${resolved.duration}s) exceeds the plan maximum of ${L.maxDuration}s.`,
+        );
+    } catch (error) {
+      err(ctx, "duration", (error as Error).message);
     }
   }
 
@@ -5846,7 +5940,7 @@ export function getElementDocs(type: string): ElementDoc | undefined {
       ],
       notes: [
         "Scene count is plan-limited.",
-        "When EVERY scene has an explicit duration, the project duration is auto-computed (sum minus transition overlaps) and must fit the plan's maxDuration.",
+        "Scene projects run for at least the sum of scene durations minus transition overlaps; a longer root duration is preserved. Auto mode also includes timed global content and must fit the plan's maxDuration.",
       ],
       example: {
         id: "intro",
