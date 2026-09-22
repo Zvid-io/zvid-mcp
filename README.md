@@ -258,3 +258,9 @@ mcp-publisher publish                          # reads ./server.json
 ```
 
 **Keep versions in sync** on every release — a mismatch blocks the registry publish. Update all three together: `package.json` `version`, `server.json` `version`, and `server.json` `packages[0].version`. The server name must match in both files: `package.json` `mcpName` == `server.json` `name`.
+
+## Community and support
+
+Join the [Zvid community on Discord](https://discord.gg/MZyWKqHDj3) to ask
+questions, discuss video automation workflows, and share what you build.
+For private account or billing questions, email [help@zvid.io](mailto:help@zvid.io).
