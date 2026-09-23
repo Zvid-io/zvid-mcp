@@ -7,16 +7,14 @@
   "homepage": "https://zvid.io",
   "author": {
     "name": "Zvid",
-    "email": "help@zvid.io",
-    "url": "https://zvid.io"
+    "url": "https://zvid.io/contact"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Zvid-io/zvid-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/Zvid-io/zvid-mcp/issues",
-    "email": "help@zvid.io"
+    "url": "https://zvid.io/contact"
   },
   "publishConfig": {
     "access": "public"

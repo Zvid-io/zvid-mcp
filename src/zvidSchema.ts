@@ -1292,7 +1292,7 @@ export function buildRenderRequestJsonSchema(
         maxLength: MAX_URL_LEN,
         pattern: "^https?://",
         description:
-          "Per-job webhook notified on render.completed / render.failed (HMAC-SHA256 signed).",
+          "Unsigned per-job webhook notified on render.completed / render.failed. Register an account webhook for HMAC-SHA256 signed delivery.",
       },
     },
     additionalProperties: false,
@@ -6271,7 +6271,7 @@ export const EXAMPLES: Example[] = [
     name: "webhook-flow",
     title: "Render with webhook notification",
     description:
-      'Fire-and-forget render: attach a per-job webhookUrl and receive render.completed / render.failed (HMAC-SHA256 signed: X-Zvid-Signature over "<X-Zvid-Timestamp>.<raw body>") instead of polling.',
+      'Attach a per-job webhookUrl to receive unsigned render.completed / render.failed notifications. Retrieve the job using your API key before trusting an unsigned callback; register an account webhook for HMAC-SHA256 signed delivery.',
     request: {
       payload: {
         type: "video",

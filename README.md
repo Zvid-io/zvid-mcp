@@ -48,15 +48,11 @@ You can also open `/mcp` inside Claude Code and authenticate there.
 
 ### OpenAI Codex
 
-Add this to `~/.codex/config.toml`, then authenticate from MCP settings or run
-`codex mcp login zvid`:
+Register the server, then authenticate from MCP settings or the command line:
 
-```toml
-[mcp_servers.zvid]
-url = "https://mcp.zvid.io/mcp"
-auth = "oauth"
-scopes = ["zvid:mcp"]
-oauth_resource = "https://mcp.zvid.io/mcp"
+```bash
+codex mcp add zvid --url https://mcp.zvid.io/mcp
+codex mcp login zvid
 ```
 
 The dashboard stores the default tool profile
@@ -152,8 +148,7 @@ immediately before submission. An idempotency UUID prevents retry duplication.
 
 Update and delete tools remain disabled in every profile. Stored webhook
 secrets are redacted by `get_webhook`; only `create_webhook` returns a new
-secret. Bulk calls default to 25 items even though the underlying API can
-accept more.
+secret. MCP bulk calls normally allow at most 25 items, subject to account limits. The direct REST API's 500-item hard cap does not raise this tool ceiling; split work into appropriately sized batches.
 
 The server also publishes four user-invoked workflow prompts (product promo,
 social reel, thumbnail and square post) and safe MCP resources at
@@ -169,10 +164,10 @@ described above:
 | `plan_creative_video`                                                                           | Plan-aware storyboard and art direction from a brief — plus `libraryCandidates`: published examples ranked against the brief with an adapt-vs-assemble decision. Supports `consistent`, `fresh`, and `explore` modes, recent-asset exclusions, brand tokens, style packs, and scene recipes |
 | `find_matching_examples`                                                                        | Rank the entire published examples library against a brief (category synonyms, aspect/duration fit) and return candidates with thumbnails plus a decision: `adapt-example`, `adapt-or-assemble`, or `assemble-similar` (with design-template/canvas-preset/shape modules)                   |
 | `start_from_example`                                                                            | Fetch an example's render-ready project JSON plus an adaptation map (variables, text/media slots, scene summary, fonts) and the adaptation contract — the premium path: keep the layout, swap copy/media/brand. Suggests free alternatives when a premium example is plan-locked            |
-| `render_from_example`                                                                           | One-call premium render: example slug + new variable values → the server saves it as a template, dry-runs the variables, and queues the render with the designed layout fully intact. The most reliable path for smaller models                                                             |
+| `render_from_example`                                                                           | Automation/Developer direct render: example slug + variable values saves a template, validates and queues a spending render. Creator uses create_media_from_example, then approved render_media                                                             |
 | `search_creative_library`                                                                       | Search complete examples, animated Design Studio templates, canvas presets, or shapes; results include preview/thumbnail metadata when published                                                                                                                                            |
 | `get_creative_asset`                                                                            | Fetch metadata and full JSON content for one creative-library item                                                                                                                                                                                                                          |
-| `list_stock_providers` / `search_stock_media`                                                   | Discover configured image/video/GIF/audio providers and search normalized render-ready media URLs                                                                                                                                                                                           |
+| `list_stock_providers` / `search_stock_media`                                                   | Discover stock capabilities and search Zvid's stock library for render-ready media URLs                                                                                                                                                                                           |
 | `get_project_schema`                                                                            | Live caller-plan-aware JSON Schema (draft 2020-12) for a project payload or full render request, plus validation notes, professional authoring guidelines, and required workflow; falls back to the bundled default schema when the endpoint is unavailable                                 |
 | `validate_project_json`                                                                         | Validate a payload before rendering — field-level errors, free. Also lints layout: overlapping texts, x/y ignored by presets, off-canvas boxes, padding cut-offs, low contrast. `remote: true` also runs the live API validator with your plan's real limits                                |
 | `list_supported_elements`                                                                       | All element types (IMAGE, VIDEO, GIF, SVG, TEXT, AUDIO, SUBTITLE, SCENE) with required fields                                                                                                                                                                                               |
@@ -183,7 +178,7 @@ described above:
 | `create_image_render`                                                                           | Queue a still-image render (PNG/JPEG/WebP; supports `snapshotTime`, `quality`, `transparent`)                                                                                                                                                                                               |
 | `get_render`                                                                                    | Job state (`waiting\|active\|completed\|failed`), progress, output `url` + `thumbnailUrl`                                                                                                                                                                                                   |
 | `list_renders`                                                                                  | List render jobs (filter by `type`)                                                                                                                                                                                                                                                         |
-| `create_bulk_render`                                                                            | One template/payload × N variable sets → N jobs (max 500)                                                                                                                                                                                                                                   |
+| `create_bulk_render`                                                                            | One template/payload × N variable sets → N jobs (MCP default maximum 25; account limits also apply)                                                                                                                                                                                                                                   |
 | `get_bulk_render` / `list_bulk_renders`                                                         | Inspect bulk batches                                                                                                                                                                                                                                                                        |
 | `list_templates` / `get_template`                                                               | Browse owned templates; `get_template` returns the full project JSON                                                                                                                                                                                                                        |
 | `create_template` / `duplicate_template`                                                        | Create a plan-validated reusable template or make an active editable copy                                                                                                                                                                                                                   |
@@ -194,17 +189,17 @@ described above:
 
 ## Schema-aware authoring
 
-The server doesn't just forward payloads — it knows the Zvid project schema. The schema tools are backed by a shared module (`../schema`, vendored as `src/zvidSchema.ts`) that is **derived from the live backend validation** (`orch/middleware/validation.js`) and parity-tested against it, so tool answers never drift from what the API actually accepts. When public docs and these tools disagree, the tools (backend) win.
+The schema tools use a shared module (`../schema`, vendored as `src/zvidSchema.ts`) that is maintained alongside backend validation and parity-tested against it. `get_project_schema` prefers the current caller-plan-aware endpoint. A result marked `live: false` is a bundled fallback, not proof of the current account's limits. Use `validate_project_json` with `remote: true` to validate the exact project before rendering. Local schemas cannot prove that remote media will download or that a composition is visually correct.
 
 The server also advertises this workflow as MCP `instructions`, so compliant clients receive it at initialize time. The example-first flow for an AI client authoring a video:
 
 1. `plan_creative_video` with the brief, format, duration, brand and variation mode. The response includes ranked `libraryCandidates` and a decision.
-2. Decision `adapt-example`: `start_from_example` with the top slug to see its variables and adaptation map, then the easiest premium path — pick new variable VALUES (copy, media URLs, brand colors) and call `render_from_example { slug, variables }`; the server keeps the designed layout/animations intact. Edit the payload manually only when variables cannot express the change (keep the layout skeleton; never simplify a complex example into plain text). Manual template route: `create_template` → `preview_template` → `create_render { template, variables }` — variables are inert on direct payload renders.
+2. Decision `adapt-example`: inspect the example with `start_from_example`, then provide new variable values to `create_media_from_example` to save a reviewable draft and receive a credit quote. Preserve its layout and animation unless the task requires changes. Supported variables, conditions and iteration resolve in inline projects as well as stored templates; a stored template is useful for reuse, not a prerequisite for substitution.
 3. Decision `assemble-similar` (or nothing close on inspection): assemble the planned scene recipes from the returned `design-templates`, `canvas-presets` and `shapes` modules (or `search_creative_library`). Never force an unrelated full-video template.
 4. Use `search_stock_media` for topic-specific visuals and music for each scene — full-quality `src` URLs, natural size ≥ the canvas.
 5. When composing, call `get_project_schema` / `list_supported_elements` / `get_element_docs` for the exact shape.
 6. Run `validate_project_json` (add `remote: true` to check against the caller's real plan) and fix every error and layout warning. Use `repair_project_json` only for mechanical mistakes.
-7. `create_render` / `create_image_render`, inspect a draft, revise if needed, then poll `get_render` for the final output.
+7. In the default Creator profile, save the exact validated payload with `create_media` (or use the template/example draft tools). Review the draft and quote, revise if needed, and call `render_media` with the approved quote token. Track the result with `get_media` or `get_render` until completion. In Automation/Developer, direct `create_render`, `create_image_render` and `render_from_example` calls submit immediately and spend credits; they do not create a pre-render draft for approval.
 
 For stills or quick "make something like X" requests without a full plan, start at `find_matching_examples` (`type: "image"` for stills).
 
@@ -231,7 +226,9 @@ For a reusable template, replace the final render with `create_template`. Later 
 
 ## Webhook signature verification
 
-Deliveries are signed: `X-Zvid-Signature: sha256=HMAC_SHA256(secret, "<X-Zvid-Timestamp>.<raw body>")`. The secret (`whsec_…`) is returned once by `create_webhook`; `get_webhook` redacts it.
+Registered webhook deliveries are signed: `X-Zvid-Signature: sha256=<hex>` where the hex value is `HMAC_SHA256(secret, "<X-Zvid-Timestamp>.<raw body>")`. Save the secret (`whsec_…`) returned once by `create_webhook`; `get_webhook` redacts it. Verify the original raw request bytes before parsing the event.
+
+Per-request `webhookUrl` callbacks are **not signed** and do not share the registered webhook secret. Both callback types use an event envelope; see [webhook documentation](https://docs.zvid.io/docs/automation/webhooks/) for the exact body and verification guidance.
 
 ## Development
 
@@ -245,7 +242,7 @@ ZVID_API_KEY=zvid_… ZVID_API_URL=http://localhost:4000 node scripts/e2e-local.
 
 ## Publishing (manual)
 
-Not published yet.
+`@zvid/mcp` 0.1.0 was available on npm when checked on 22 September 2026. The hosted service and a particular installed npm version may expose different revisions; query the connected client's actual capabilities.
 
 **npm.** Bump `version` in `package.json`, then `npm publish` from `mcp/` (public access is set via `publishConfig`). The `prepublishOnly` hook builds `dist/`.
 
@@ -263,4 +260,4 @@ mcp-publisher publish                          # reads ./server.json
 
 Join the [Zvid community on Discord](https://discord.gg/MZyWKqHDj3) to ask
 questions, discuss video automation workflows, and share what you build.
-For private account or billing questions, email [help@zvid.io](mailto:help@zvid.io).
+For private account or billing questions, use our [contact form](https://zvid.io/contact).
