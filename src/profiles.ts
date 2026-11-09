@@ -33,6 +33,7 @@ const CREATOR_TOOLS = new Set([
   "get_element_docs",
   "get_example_payload",
   "plan_creative_video",
+  "build_data_visual",
   "find_matching_examples",
   "start_from_example",
   "search_creative_library",

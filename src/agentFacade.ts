@@ -1,5 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import {
+  DATA_VISUAL_GUIDELINES,
+  libraryVisualIssue,
+  isDataVisualReference,
+} from "./dataVisuals.js";
 import { ZvidApiError, type ZvidClient } from "./client.js";
 import {
   ADAPTATION_CONTRACT,
@@ -285,7 +290,10 @@ function deterministicFallbackTemplate(input: {
     typeof input.brandKit?.headlineFont === "string"
       ? input.brandKit.headlineFont
       : "Inter";
-  const name = sanitizeName(input.name, `${words.slice(0, 8).join(" ")} template`);
+  const name = sanitizeName(
+    input.name,
+    `${words.slice(0, 8).join(" ")} template`,
+  );
   const fontSize = Math.max(48, Math.round(height / 10));
 
   const variables: Record<string, unknown> = {
@@ -665,6 +673,10 @@ async function creativeContext(
       limit: 5,
     });
     for (const match of candidates) {
+      const original = pool.find((item) => item.slug === match.slug);
+      // No-sampling paths otherwise copy the library's example numbers/edges
+      // as the user's content. Do not use these as automatic factual fallbacks.
+      if (isDataVisualReference(original, input.brief)) continue;
       try {
         const payload = await client.getRedirectedJson<Record<string, unknown>>(
           `/api/library/examples/${encodeURIComponent(match.slug)}/content`,
@@ -724,9 +736,12 @@ async function samplePayload(
 
   const templateMode = input.templateMode === true;
   const response = await options.server.server.createMessage({
-    systemPrompt: templateMode
-      ? "You are Zvid's template composer. Return only one complete parameterized Zvid template project JSON object: it declares a top-level `variables` object of safe defaults and references them via {{name}} placeholders. Never include Markdown or commentary."
-      : "You are Zvid's project composer. Return only one complete JSON object accepted by the Zvid renderer. Never include Markdown or commentary.",
+    systemPrompt:
+      DATA_VISUAL_GUIDELINES.join("\n") +
+      "\n" +
+      (templateMode
+        ? "You are Zvid's template composer. Return only one complete parameterized Zvid template project JSON object: it declares a top-level `variables` object of safe defaults and references them via {{name}} placeholders. Never include Markdown or commentary."
+        : "You are Zvid's project composer. Return only one complete JSON object accepted by the Zvid renderer. Never include Markdown or commentary."),
     messages: [
       {
         role: "user",
@@ -761,6 +776,7 @@ async function samplePayload(
               invalidPayload: safeCorrection?.payload,
               validationErrors: safeCorrection?.errors,
               authoringGuidelines: AUTHORING_GUIDELINES,
+              dataVisualGuidelines: DATA_VISUAL_GUIDELINES,
               ...(templateMode
                 ? { templateAuthoringGuidelines: TEMPLATE_AUTHORING_GUIDELINES }
                 : {}),
@@ -808,14 +824,12 @@ async function preparePayload(
     options.server.server.getClientCapabilities()?.sampling,
   );
   let composition:
-    | "provided"
-    | "sampling"
-    | "example-fallback"
-    | "deterministic-fallback" = input.payload
-    ? "provided"
-    : canSample
-      ? "sampling"
-      : "deterministic-fallback";
+    "provided" | "sampling" | "example-fallback" | "deterministic-fallback" =
+    input.payload
+      ? "provided"
+      : canSample
+        ? "sampling"
+        : "deterministic-fallback";
   let payload = input.payload;
   if (!payload && canSample) {
     payload = await samplePayload(options, {
@@ -982,14 +996,12 @@ async function prepareTemplatePayload(
     options.server.server.getClientCapabilities()?.sampling,
   );
   let composition:
-    | "provided"
-    | "sampling"
-    | "example-fallback"
-    | "deterministic-fallback" = input.payload
-    ? "provided"
-    : canSample
-      ? "sampling"
-      : "deterministic-fallback";
+    "provided" | "sampling" | "example-fallback" | "deterministic-fallback" =
+    input.payload
+      ? "provided"
+      : canSample
+        ? "sampling"
+        : "deterministic-fallback";
   let payload = input.payload;
   if (!payload && canSample) {
     payload = await samplePayload(options, {
@@ -1002,8 +1014,10 @@ async function prepareTemplatePayload(
     // Without sampling, a designed example that already declares variables is
     // a far better template than the generic type-led fallback — adopt it
     // verbatim (its defaults become the template defaults).
-    const repaired = repairProject(context.referencePayload)
-      .repaired as Record<string, unknown>;
+    const repaired = repairProject(context.referencePayload).repaired as Record<
+      string,
+      unknown
+    >;
     const candidate = { ...repaired, type: input.type };
     if (
       buildAdaptationMap(candidate).variables.length > 0 &&
@@ -1064,6 +1078,22 @@ async function saveProject(
   );
 }
 
+async function saveValidatedProject(
+  client: ZvidClient,
+  name: string,
+  payload: Record<string, unknown>,
+  validation: ValidationQuote,
+): Promise<{ project: StoredProject; validation: ValidationQuote }> {
+  const project = await saveProject(client, name, payload);
+  // Persistence can add derived fields such as duration. Quote the actual
+  // saved payload so the first render does not require a get_media refresh.
+  const savedValidation =
+    hashPayload(project.payload) === hashPayload(validation.payload ?? payload)
+      ? validation
+      : await validateAndQuote(client, project.payload);
+  return { project, validation: savedValidation };
+}
+
 function draftResult(
   project: StoredProject,
   validation: ValidationQuote,
@@ -1110,10 +1140,9 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     "create_media",
     {
       title: "Create a Zvid media draft",
-      description:
-        requiresAuthoredPayload
-          ? "Save an exact, validated project payload as a persistent video or image draft and return a signed credit quote. First use the planning, example/library, stock-media, repair and validation tools; then pass the complete payload here. When a library example matches the brief, prefer create_media_from_example { slug, variables } instead — it resolves the design server-side without this payload round trip. When the user asks for a reusable TEMPLATE with replaceable fields, use create_media_template instead — drafts saved here are static one-offs. Creator refuses brief-only composition so weak models cannot improvise a low-quality design. Draft creation does NOT spend render credits."
-          : "Turn a natural-language brief or exact payload into a validated, persistent video or image draft and a signed credit quote. The brief argument is required. This does NOT spend render credits. When a library example matches the brief, prefer create_media_from_example { slug, variables } — it keeps the designed layout intact. When the user asks for a reusable TEMPLATE with replaceable fields, use create_media_template instead — drafts saved here are static one-offs.",
+      description: requiresAuthoredPayload
+        ? "Save an exact, validated project payload as a persistent video or image draft and return a signed credit quote. First use the planning, example/library, stock-media, repair and validation tools; then pass the complete payload here. When a library example matches the brief, prefer create_media_from_example { slug, variables } instead — it resolves the design server-side without this payload round trip. When the user asks for a reusable TEMPLATE with replaceable fields, use create_media_template instead — drafts saved here are static one-offs. Creator refuses brief-only composition so weak models cannot improvise a low-quality design. Draft creation does NOT spend render credits."
+        : "Turn a natural-language brief or exact payload into a validated, persistent video or image draft and a signed credit quote. The brief argument is required. This does NOT spend render credits. When a library example matches the brief, prefer create_media_from_example { slug, variables } — it keeps the designed layout intact. When the user asks for a reusable TEMPLATE with replaceable fields, use create_media_template instead — drafts saved here are static one-offs.",
       inputSchema: {
         brief: z
           .string()
@@ -1148,14 +1177,19 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
         args.name,
         `${args.brief.slice(0, 80)} ${args.type}`,
       );
-      const project = await saveProject(options.client, name, prepared.payload);
-      const signedQuote = quoteFor(project, prepared.validation, options);
-      return draftResult(project, prepared.validation, signedQuote, {
+      const { project, validation } = await saveValidatedProject(
+        options.client,
+        name,
+        prepared.payload,
+        prepared.validation,
+      );
+      const signedQuote = quoteFor(project, validation, options);
+      return draftResult(project, validation, signedQuote, {
         composition: prepared.composition,
         ...(prepared.composition === "deterministic-fallback"
           ? {
               qualityNotice:
-                "The connected MCP client does not support sampling, so Zvid created a safe type-led draft. Review it in the editor or supply exact project JSON for richer composition.",
+                "The connected MCP client does not support sampling, so Zvid created a safe type-led draft. Charts and diagrams are omitted; supply structured data and provenance to build_data_visual to add one. Review the draft in the editor or supply exact project JSON for richer composition.",
             }
           : prepared.composition === "example-fallback"
             ? {
@@ -1212,6 +1246,13 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     guarded(async ({ slug, variables, brief, name }) => {
       const base = `/api/library/examples/${encodeURIComponent(slug)}`;
       const item = await options.client.get(base);
+      const visualIssue = libraryVisualIssue(item);
+      if (visualIssue)
+        return {
+          drafted: false,
+          slug,
+          message: `${visualIssue} Rebuild the visual with build_data_visual using actual data/relationships and source, or omit it before saving a draft.`,
+        };
       let content: Record<string, unknown>;
       try {
         content = (await options.client.getRedirectedJson(
@@ -1259,14 +1300,19 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
       }
 
       let payload = resolved.payload;
-      const validation = await validateAndQuote(options.client, payload);
-      payload = validation.payload ?? payload;
+      const initialValidation = await validateAndQuote(options.client, payload);
+      payload = initialValidation.payload ?? payload;
       const meta = item as { title?: string };
       const draftName = sanitizeName(
         name,
         `${meta.title ?? slug}${brief ? ` ${brief.slice(0, 60)}` : ""} draft`,
       );
-      const project = await saveProject(options.client, draftName, payload);
+      const { project, validation } = await saveValidatedProject(
+        options.client,
+        draftName,
+        payload,
+        initialValidation,
+      );
       const signedQuote = quoteFor(project, validation, options);
       return draftResult(project, validation, signedQuote, {
         composition: "example-adaptation",
@@ -1293,10 +1339,9 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     "create_media_template",
     {
       title: "Create a reusable media template",
-      description:
-        requiresAuthoredPayload
-          ? "Save a complete PARAMETERIZED project payload as a persistent REUSABLE template (tpl_...) owned by this account. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Follow the same example-first workflow as drafts: plan_creative_video, adapt the best example via start_from_example (it keeps existing variables), THEN parameterize — never compose the layout from scratch when an example matches. The payload must declare a top-level `variables` object of safe defaults referenced via {{name}} placeholders; the backend validates by rendering the defaults and rejects unresolved references and video scenes without explicit durations. Creating a template spends NO credits. Instantiate it later with create_media_from_template { templateId, variables }."
-          : "Turn a natural-language brief (or exact parameterized payload) into a persistent REUSABLE template (tpl_...): a designed project that declares `variables` with safe defaults and references them via {{name}} placeholders, so every instantiation swaps copy, media and brand values without touching the layout. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Brief-only calls adapt the best matching library example server-side; for an authored payload, follow the example-first workflow (plan_creative_video, start_from_example) before parameterizing. Spends NO credits. Instantiate with create_media_from_template { templateId, variables }.",
+      description: requiresAuthoredPayload
+        ? "Save a complete PARAMETERIZED project payload as a persistent REUSABLE template (tpl_...) owned by this account. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Follow the same example-first workflow as drafts: plan_creative_video, adapt the best example via start_from_example (it keeps existing variables), THEN parameterize — never compose the layout from scratch when an example matches. The payload must declare a top-level `variables` object of safe defaults referenced via {{name}} placeholders; the backend validates by rendering the defaults and rejects unresolved references and video scenes without explicit durations. Creating a template spends NO credits. Instantiate it later with create_media_from_template { templateId, variables }."
+        : "Turn a natural-language brief (or exact parameterized payload) into a persistent REUSABLE template (tpl_...): a designed project that declares `variables` with safe defaults and references them via {{name}} placeholders, so every instantiation swaps copy, media and brand values without touching the layout. Use this whenever the user asks for a TEMPLATE, a reusable design, or replaceable fields — create_media saves only static one-off drafts. Brief-only calls adapt the best matching library example server-side; for an authored payload, follow the example-first workflow (plan_creative_video, start_from_example) before parameterizing. Spends NO credits. Instantiate with create_media_from_template { templateId, variables }.",
       inputSchema: {
         brief: z
           .string()
@@ -1363,7 +1408,7 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
         ...(prepared.composition === "deterministic-fallback"
           ? {
               qualityNotice:
-                "The connected MCP client does not support sampling, so Zvid created a safe type-led template with standard variables (brandName, headline, message, ctaText, primaryColor). Review it in the editor, or supply an exact parameterized payload for richer composition.",
+                "The connected MCP client does not support sampling, so Zvid created a safe type-led template with standard variables (brandName, headline, message, ctaText, primaryColor). Charts and diagrams are omitted; use build_data_visual with structured inputs and rebuild its geometry whenever data changes. Review the template in the editor, or supply an exact parameterized payload for richer composition.",
             }
           : prepared.composition === "example-fallback"
             ? {
@@ -1464,15 +1509,19 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
         preview.project,
         "Resolved template project",
       );
-      const validation = await validateAndQuote(options.client, resolved);
+      const initialValidation = await validateAndQuote(
+        options.client,
+        resolved,
+      );
       const draftName = sanitizeName(
         name,
         `${template.name ?? templateId}${brief ? ` ${brief.slice(0, 60)}` : ""} draft`,
       );
-      const project = await saveProject(
+      const { project, validation } = await saveValidatedProject(
         options.client,
         draftName,
-        validation.payload ?? resolved,
+        initialValidation.payload ?? resolved,
+        initialValidation,
       );
       const signedQuote = quoteFor(project, validation, options);
       return draftResult(project, validation, signedQuote, {
@@ -1496,10 +1545,9 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
     "revise_media",
     {
       title: "Revise a Zvid media draft",
-      description:
-        requiresAuthoredPayload
-          ? "Create a new immutable draft revision from a complete replacement payload that you have validated. The original remains unchanged. Creator refuses instruction-only creative rewriting."
-          : "Create a new immutable draft revision from an existing draft. The original remains unchanged. Describe the revision naturally when sampling is supported, or include the complete replacement payload.",
+      description: requiresAuthoredPayload
+        ? "Create a new immutable draft revision from a complete replacement payload that you have validated. The original remains unchanged. Creator refuses instruction-only creative rewriting."
+        : "Create a new immutable draft revision from an existing draft. The original remains unchanged. Describe the revision naturally when sampling is supported, or include the complete replacement payload.",
       inputSchema: {
         draftId: z.string().regex(PROJECT_ID_RE),
         instruction: z.string().trim().min(2).max(5000),
@@ -1542,15 +1590,16 @@ export function registerAgentFacade(options: AgentFacadeOptions): void {
         }
         revised = recordValue(repaired.repaired, "Repaired revision");
       }
-      const validation = await validateAndQuote(options.client, revised);
+      const initialValidation = await validateAndQuote(options.client, revised);
       const revisionName = sanitizeName(
         name,
         `${source.name ?? "Zvid draft"} revision`,
       );
-      const project = await saveProject(
+      const { project, validation } = await saveValidatedProject(
         options.client,
         revisionName,
-        validation.payload ?? revised,
+        initialValidation.payload ?? revised,
+        initialValidation,
       );
       const signedQuote = quoteFor(project, validation, options);
       return draftResult(project, validation, signedQuote, {
@@ -1767,6 +1816,7 @@ export function registerAgentResourcesAndPrompts(
           text: JSON.stringify(
             {
               authoringGuidelines: AUTHORING_GUIDELINES,
+              dataVisualGuidelines: DATA_VISUAL_GUIDELINES,
               templateAuthoringGuidelines: TEMPLATE_AUTHORING_GUIDELINES,
               adaptationContract: ADAPTATION_CONTRACT,
             },
@@ -1828,6 +1878,8 @@ export function registerAgentResourcesAndPrompts(
             content: {
               type: "text",
               text:
+                DATA_VISUAL_GUIDELINES.join("\n") +
+                "\n" +
                 `Use Zvid's quality-first authoring workflow for this request. First call plan_creative_video. Prefer adapting a strong matching example with start_from_example; otherwise assemble from creative-library and stock-media results. Produce complete project JSON, validate it with validate_project_json (remote: true), fix every error and layout warning, then call create_media with both the original brief and the exact validated payload. Never call create_media from the brief alone. Do not render until I approve the quoted credits.\n` +
                 JSON.stringify(
                   { ...defaults, brief, brand: brand || undefined },

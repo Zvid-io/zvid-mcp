@@ -24,6 +24,7 @@ const EXPECTED_TOOLS = [
   "get_element_docs",
   "get_example_payload",
   "plan_creative_video",
+  "build_data_visual",
   "find_matching_examples",
   "start_from_example",
   "render_from_example",
@@ -99,6 +100,134 @@ test("lists all Zvid tools", async () => {
   );
 });
 
+test("build_data_visual is a local, free, repeatable creator tool and omits missing inputs", async () => {
+  let requests = 0;
+  const client = await connectedClient(
+    (async () => {
+      requests++;
+      throw new Error("No API calls expected");
+    }) as typeof fetch,
+    "creator",
+  );
+  const tool = (await client.listTools()).tools.find(
+    (item) => item.name === "build_data_visual",
+  )!;
+  assert.equal(tool.annotations?.readOnlyHint, true);
+  assert.equal(tool.annotations?.openWorldHint, false);
+  const args = {
+    kind: "bar",
+    title: "Orders",
+    purpose: "Compare monthly order counts",
+    source: { kind: "user-provided", label: "Shop totals, Q1 2026" },
+    unit: "orders",
+    data: [
+      { label: "Jan", value: 20 },
+      { label: "Feb", value: 40 },
+    ],
+  };
+  const first = await client.callTool({
+    name: "build_data_visual",
+    arguments: args,
+  });
+  const second = await client.callTool({
+    name: "build_data_visual",
+    arguments: args,
+  });
+  assert.deepEqual(first, second);
+  assert.equal(JSON.parse((first.content as any)[0].text).status, "ready");
+  const missing = JSON.parse(
+    (
+      (
+        await client.callTool({
+          name: "build_data_visual",
+          arguments: { kind: "diagram" },
+        })
+      ).content as any
+    )[0].text,
+  );
+  assert.equal(missing.status, "omitted");
+  assert.equal("payload" in missing, false);
+  assert.equal(requests, 0);
+  assert.match(client.getInstructions()!, /overrides example-first/);
+  const resource = await client.readResource({
+    uri: "zvid://authoring/guidelines",
+  });
+  const content = resource.contents[0];
+  assert.ok("text" in content);
+  assert.match(content.text, /Never invent values/);
+  await client.close();
+});
+
+test("unsafe library chart and diagram shortcuts stop before content loading, saving or charging", async () => {
+  for (const item of [
+    {
+      slug: "legacy",
+      title: "Legacy chart",
+      meta: { chartMode: "decorative" },
+    },
+    { slug: "unknown-flow", title: "Process diagram", meta: {} },
+    { slug: "dataviz-monthly-report", meta: {} },
+  ]) {
+    const seen: string[] = [];
+    const client = await connectedClient((async (input: URL | RequestInfo) => {
+      const path = new URL(String(input)).pathname;
+      seen.push(path);
+      assert.equal(path, `/api/library/examples/${item.slug}`);
+      return Response.json(item);
+    }) as typeof fetch);
+    for (const name of [
+      "start_from_example",
+      "create_media_from_example",
+      "render_from_example",
+    ]) {
+      const result = await client.callTool({
+        name,
+        arguments: { slug: item.slug },
+      });
+      const body = JSON.parse((result.content as any)[0].text);
+      assert.match(body.message, /build_data_visual/);
+      assert.ok(
+        body.status === "omitted" ||
+          body.drafted === false ||
+          body.rendered === false,
+      );
+      assert.equal("payload" in body, false);
+    }
+    assert.equal(seen.length, 3);
+    await client.close();
+  }
+});
+
+test("discovery does not recommend decorative or unbound diagram examples", async () => {
+  const client = await connectedClient((async () =>
+    Response.json({
+      items: [
+        {
+          slug: "fake-chart",
+          title: "Revenue chart",
+          meta: { chartMode: "decorative" },
+        },
+        { slug: "fake-diagram", title: "Revenue diagram" },
+        {
+          slug: "bound-chart",
+          title: "Revenue chart",
+          meta: { chartMode: "data-bound" },
+        },
+      ],
+    })) as typeof fetch);
+  const result = await client.callTool({
+    name: "find_matching_examples",
+    arguments: { brief: "Revenue chart", includeParts: false },
+  });
+  const body = JSON.parse((result.content as any)[0].text);
+  assert.deepEqual(
+    body.examples.map((item: any) => item.slug),
+    ["bound-chart"],
+  );
+  assert.ok(body.dataVisualGuidelines.length > 0);
+  await client.close();
+});
+
 test("creator profile exposes quality authoring and requires exact payloads", async () => {
   const client = await connectedClient(fetch, "creator");
   const { tools } = await client.listTools();
@@ -163,10 +292,7 @@ test("automation profile caps bulk calls and redacts stored webhook secrets", as
   const client = await connectedClient(fetchImpl, "automation");
   const { tools } = await client.listTools();
   const bulk = tools.find((tool) => tool.name === "create_bulk_render");
-  assert.equal(
-    (bulk?.inputSchema as any).properties.items.maxItems,
-    25,
-  );
+  assert.equal((bulk?.inputSchema as any).properties.items.maxItems, 25);
 
   const webhook = firstJson(
     await client.callTool({
@@ -307,10 +433,7 @@ test("template tools expose create and duplicate without risky mutations", async
 
   assert.deepEqual(
     seen.map(({ method, path }) => `${method} ${path}`),
-    [
-      "POST /api/templates",
-      `POST /api/templates/${templateId}/duplicate`,
-    ],
+    ["POST /api/templates", `POST /api/templates/${templateId}/duplicate`],
   );
   assert.deepEqual(seen[0].body, { name: "Promo", payload: { duration: 5 } });
 });
@@ -491,6 +614,56 @@ test("validate_project_json surfaces layout lint warnings", async () => {
     .join("\n");
   assert.match(all, /overlap on screen at the same time/);
   assert.match(all, /x\/y are IGNORED/);
+});
+
+test("fractional animated boxes warn without changing SVG data or rejecting the schema", async () => {
+  const client = await connectedClient(fetch);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="100"><rect x="0" y="0" width="25.5" height="10"/></svg>';
+  const payload = {
+    width: 1280,
+    height: 720,
+    duration: 3,
+    visuals: [
+      {
+        type: "SVG",
+        svg,
+        x: 10.25,
+        y: 20.5,
+        width: 733.3333333333333,
+        height: 100,
+        enterAnimation: "smoothup",
+        enterBegin: 0,
+        enterEnd: 0.5,
+      },
+    ],
+  };
+  try {
+    const checked = firstJson(
+      await client.callTool({
+        name: "validate_project_json",
+        arguments: { payload, remote: false },
+      }),
+    );
+    assert.equal(checked.valid, true);
+    assert.ok(
+      checked.warnings.some(
+        (w: { field: string; message: string }) =>
+          w.field === "visuals[0].width" && /fractional/.test(w.message),
+      ),
+    );
+    assert.equal(payload.visuals[0].svg, svg);
+    assert.equal(payload.visuals[0].width, 733.3333333333333);
+    payload.visuals[0].width = 733;
+    const corrected = firstJson(await client.callTool({ name: "validate_project_json", arguments: { payload, remote: false } }));
+    assert.ok(
+      !corrected.warnings.some((w: { message: string }) =>
+        /fractional/.test(w.message),
+      ),
+    );
+  } finally {
+    await client.close();
+  }
 });
 
 test("validate_project_json remote: true posts to /api/render/validate/api-key", async () => {
@@ -795,16 +968,20 @@ function routedFetch(
   }) as typeof fetch;
 }
 
-const jsonResponse = (body: unknown, status = 200) => () =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+const jsonResponse =
+  (body: unknown, status = 200) =>
+  () =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
 
 test("find_matching_examples ranks the library and decides adapt-example", async () => {
   const seen: string[] = [];
   const client = await connectedClient(
-    routedFetch(seen, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+    routedFetch(seen, [
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
   );
   const body = firstJson(
     await client.callTool({
@@ -923,13 +1100,16 @@ test("find_matching_examples falls back to assemble-similar with library parts",
 
 test("plan_creative_video threads recentAssetSlugs into candidate exclusion", async () => {
   const client = await connectedClient(
-    routedFetch([], [
+    routedFetch(
+      [],
       [
-        "/api/render/creative-plan",
-        jsonResponse({ error: "NOT_FOUND", message: "not deployed" }, 404),
+        [
+          "/api/render/creative-plan",
+          jsonResponse({ error: "NOT_FOUND", message: "not deployed" }, 404),
+        ],
+        ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
       ],
-      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
-    ]),
+    ),
   );
   const body = firstJson(
     await client.callTool({
@@ -1018,14 +1198,24 @@ test("start_from_example validates static payloads for direct adaptation", async
     type: "video",
     duration: 8,
     visuals: [
-      { type: "TEXT", text: "Hello", style: { fontSize: "64px", color: "#ffffff" } },
+      {
+        type: "TEXT",
+        text: "Hello",
+        style: { fontSize: "64px", color: "#ffffff" },
+      },
     ],
   };
   const client = await connectedClient(
-    routedFetch([], [
-      ["/api/library/examples/demo/content", jsonResponse(payload)],
-      ["/api/library/examples/demo", jsonResponse({ slug: "demo", meta: {} })],
-    ]),
+    routedFetch(
+      [],
+      [
+        ["/api/library/examples/demo/content", jsonResponse(payload)],
+        [
+          "/api/library/examples/demo",
+          jsonResponse({ slug: "demo", meta: {} }),
+        ],
+      ],
+    ),
   );
   const body = firstJson(
     await client.callTool({
@@ -1040,20 +1230,23 @@ test("start_from_example validates static payloads for direct adaptation", async
 
 test("start_from_example surfaces premium locks with free alternatives", async () => {
   const client = await connectedClient(
-    routedFetch([], [
+    routedFetch(
+      [],
       [
-        "/api/library/examples/pro-ecom-flash-sale/content",
-        jsonResponse(
-          { error: "PREMIUM_REQUIRED", message: "Premium plan required" },
-          403,
-        ),
+        [
+          "/api/library/examples/pro-ecom-flash-sale/content",
+          jsonResponse(
+            { error: "PREMIUM_REQUIRED", message: "Premium plan required" },
+            403,
+          ),
+        ],
+        [
+          "/api/library/examples/pro-ecom-flash-sale",
+          jsonResponse(LIBRARY_LISTING.items[0]),
+        ],
+        ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
       ],
-      [
-        "/api/library/examples/pro-ecom-flash-sale",
-        jsonResponse(LIBRARY_LISTING.items[0]),
-      ],
-      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
-    ]),
+    ),
   );
   const body = firstJson(
     await client.callTool({
@@ -1087,19 +1280,29 @@ test("start_from_example surfaces premium locks with free alternatives", async (
 
 test("start_from_example rethrows non-premium 401/403 errors", async () => {
   const client = await connectedClient(
-    routedFetch([], [
+    routedFetch(
+      [],
       [
-        "/api/library/examples/demo/content",
-        jsonResponse({ error: "FORBIDDEN", message: "WAF block" }, 403),
+        [
+          "/api/library/examples/demo/content",
+          jsonResponse({ error: "FORBIDDEN", message: "WAF block" }, 403),
+        ],
+        [
+          "/api/library/examples/demo",
+          jsonResponse({ slug: "demo", meta: {} }),
+        ],
       ],
-      ["/api/library/examples/demo", jsonResponse({ slug: "demo", meta: {} })],
-    ]),
+    ),
   );
   const result = await client.callTool({
     name: "start_from_example",
     arguments: { slug: "demo" },
   });
-  assert.equal(result.isError, true, "non-PREMIUM_REQUIRED 403 is a hard error");
+  assert.equal(
+    result.isError,
+    true,
+    "non-PREMIUM_REQUIRED 403 is a hard error",
+  );
   const content = result.content as { type: string; text: string }[];
   assert.match(content[0].text, /FORBIDDEN/);
 });
@@ -1115,7 +1318,10 @@ test("get_creative_asset propagates premium content errors and honours includeCo
           403,
         ),
       ],
-      ["/api/library/examples/pro-x", jsonResponse({ slug: "pro-x", meta: {} })],
+      [
+        "/api/library/examples/pro-x",
+        jsonResponse({ slug: "pro-x", meta: {} }),
+      ],
     ]),
   );
 
@@ -1126,7 +1332,10 @@ test("get_creative_asset propagates premium content errors and honours includeCo
   assert.equal(locked.isError, true);
   const lockedText = (locked.content as { text: string }[])[0].text;
   assert.match(lockedText, /PREMIUM_REQUIRED/);
-  assert.ok(!lockedText.includes("premiumLocked"), "no premiumLocked shape here");
+  assert.ok(
+    !lockedText.includes("premiumLocked"),
+    "no premiumLocked shape here",
+  );
 
   seen.length = 0;
   const metaOnly = firstJson(
@@ -1143,7 +1352,9 @@ test("get_creative_asset propagates premium content errors and honours includeCo
 test("find_matching_examples reports adapt-or-assemble for partial matches with parts", async () => {
   const seen: string[] = [];
   const client = await connectedClient(
-    routedFetch(seen, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+    routedFetch(seen, [
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
   );
   const body = firstJson(
     await client.callTool({
@@ -1173,7 +1384,10 @@ test("find_matching_examples honours explicit includeParts and threads filter ar
   const off = firstJson(
     await clientOff.callTool({
       name: "find_matching_examples",
-      arguments: { brief: "quantum physics lecture recap", includeParts: false },
+      arguments: {
+        brief: "quantum physics lecture recap",
+        includeParts: false,
+      },
     }),
   );
   assert.equal(off.decision, "assemble-similar");
@@ -1183,7 +1397,9 @@ test("find_matching_examples honours explicit includeParts and threads filter ar
   // includeParts: true forces parts even on a strong match
   const seenOn: string[] = [];
   const clientOn = await connectedClient(
-    routedFetch(seenOn, [["/api/library/examples", jsonResponse(LIBRARY_LISTING)]]),
+    routedFetch(seenOn, [
+      ["/api/library/examples", jsonResponse(LIBRARY_LISTING)],
+    ]),
   );
   const on = firstJson(
     await clientOn.callTool({
@@ -1198,7 +1414,9 @@ test("find_matching_examples honours explicit includeParts and threads filter ar
   );
   assert.equal(on.decision, "adapt-example");
   assert.ok(on.assembleFrom, "includeParts: true must force parts");
-  const partPaths = seenOn.filter((p) => !p.startsWith("/api/library/examples"));
+  const partPaths = seenOn.filter(
+    (p) => !p.startsWith("/api/library/examples"),
+  );
   assert.ok(partPaths.length > 0);
   for (const p of partPaths) {
     assert.match(
@@ -1255,10 +1473,7 @@ test("plan_creative_video enriches the plan with ranked library candidates", asy
   assert.equal(body.live, false, "plan falls back locally");
   assert.ok(body.directions?.length >= 1);
   assert.equal(body.libraryCandidates.decision, "adapt-example");
-  assert.equal(
-    body.libraryCandidates.examples[0].slug,
-    "pro-ecom-flash-sale",
-  );
+  assert.equal(body.libraryCandidates.examples[0].slug, "pro-ecom-flash-sale");
 });
 
 test("find_matching_examples rotates comparable leads in fresh mode, stays fixed in consistent", async () => {
@@ -1299,7 +1514,10 @@ test("find_matching_examples rotates comparable leads in fresh mode, stays fixed
     assert.equal(body.variation.comparableCount, 2);
     leads.add(body.examples[0].slug);
   }
-  assert.ok(leads.size >= 2, `fresh mode should vary the lead, got ${[...leads]}`);
+  assert.ok(
+    leads.size >= 2,
+    `fresh mode should vary the lead, got ${[...leads]}`,
+  );
 
   const fixed = new Set<string>();
   for (let i = 0; i < 3; i++) {
@@ -1362,7 +1580,11 @@ test("render_from_example composes template save, dry run and render in one call
       name: "render_from_example",
       arguments: {
         slug: "ad-flash-sale",
-        variables: { headline: "70% Off Kicks", promoCode: "KICK20", oops: "typo" },
+        variables: {
+          headline: "70% Off Kicks",
+          promoCode: "KICK20",
+          oops: "typo",
+        },
       },
     }),
   );
@@ -1410,7 +1632,11 @@ test("render_from_example uses the image endpoint for image examples and stops o
         return previewStatus === 200
           ? respond({ valid: true })
           : respond(
-              { error: "Invalid", message: "bad variables", details: [{ field: "title" }] },
+              {
+                error: "Invalid",
+                message: "bad variables",
+                details: [{ field: "title" }],
+              },
               400,
             );
       if (url.pathname === "/api/render/image/api-key")
@@ -1429,7 +1655,11 @@ test("render_from_example uses the image endpoint for image examples and stops o
   );
   assert.equal(ok.rendered, true);
   assert.equal(ok.projectType, "image");
-  assert.equal(ok.render.jobId, "img-job-1", "image examples render via the image endpoint");
+  assert.equal(
+    ok.render.jobId,
+    "img-job-1",
+    "image examples render via the image endpoint",
+  );
 
   const failClient = await connectedClient(routes(400));
   const fail = firstJson(
@@ -1464,7 +1694,10 @@ test("render_from_example reports premium locks without creating a template", as
     }),
   );
   assert.equal(body.premiumLocked, true);
-  assert.ok(!seen.some((p) => p.startsWith("/api/templates")), "no template created");
+  assert.ok(
+    !seen.some((p) => p.startsWith("/api/templates")),
+    "no template created",
+  );
 });
 
 test("plan_creative_video degrades gracefully when the library is unreachable", async () => {

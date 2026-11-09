@@ -6,6 +6,73 @@
 
 Official [Zvid](https://zvid.io) agent and MCP server. Creator follows a quality-first workflow: plan the brief, adapt designed examples or library assets, validate exact project JSON, save a reviewable draft, then render only after approval. Automation and Developer add trusted direct operations.
 
+## Meaningful charts and diagrams
+
+Use `build_data_visual` for a bar chart, a line chart with numeric x coordinates,
+percentage progress bars, or a small directed acyclic diagram. It is available in Creator, Automation and
+Developer, runs locally, and spends no credits. It returns a static SVG in normal
+Zvid project JSON, the input specification and the calculated geometry.
+
+Each visual needs a title, its purpose, and caller-supplied source information.
+Charts also require units and at least two labeled numeric values (one for
+progress bars). Diagrams
+require named nodes and explicit labeled relationships. Missing inputs, invalid
+numbers, unsupported connections and layouts that cannot fit readable labels
+return `status: "omitted"` with reasons and **no payload or visual**. Invalid
+tool argument types are rejected before generation. Do not fabricate a replacement.
+
+For example, after the user supplies these survey results:
+
+```json
+{
+  "kind": "bar",
+  "title": "Survey responses",
+  "purpose": "Compare the supplied response percentages",
+  "source": { "kind": "user-provided", "label": "Customer survey, October 2026" },
+  "unit": "%",
+  "data": [
+    { "label": "Option A", "value": 25 },
+    { "label": "Option B", "value": 75 }
+  ]
+}
+```
+
+Source information is recorded and displayed, not independently verified.
+Include the relevant period and scope. Explicitly requested mock data uses
+`source.kind: "illustrative"` and `allowIllustrative: true`; its output visibly
+says **Illustrative data**. Never treat the example above or library defaults
+as facts about a user.
+
+Bars share a scale that includes zero, including negative values. Line points
+use actual numeric x spacing; supply strictly increasing `data[].x` and `xUnit`.
+Progress bars use `kind: "progress"`, `unit: "%"`, and one or more
+`data: [{label: "Completion", value: 75}]` entries. Their scale is always 0–100:
+the printed 75% and the 75%-filled track are calculated from the same value.
+Zero has no visible fill; 100 fills the whole track. Decimals are preserved and
+out-of-range values are rejected, never clamped. Rebuild the complete visual
+when a template value changes. Keep fill and percentage synchronized throughout
+any animation, or use the static visual. Progress bars, rings and gauges from
+the library are treated as quantitative visuals; unverified geometry is not
+safe to reuse just because its label changes. Rings/gauges are not generated
+by this builder.
+Diagrams use `nodes: [{id, label}]` and `edges: [{from, to, label}]`; the bounded
+layout rejects cycles, skipped levels and crossing connections. Limits are
+eight chart values or six diagram nodes/eight edges, with further limits when
+the requested canvas cannot hold the labels. Simplify or split dense visuals.
+
+The returned `payload` can become an image draft, or its `visual` can be placed
+in a video scene of the same dimensions. Validate the final composition remotely
+and inspect its preview. Keep `specification` outside the render payload and
+**rebuild the entire visual whenever data changes**. Swapping SVG labels or
+adding template placeholders does not recalculate geometry.
+
+The MCP excludes known decorative charts and chart/diagram examples without
+declared binding from automatic recommendations and the example start/draft/render
+shortcuts. Automatic brief-only fallbacks also avoid copying sample chart data
+or diagram relationships. These rules override guidance to preserve an example's
+layout. Arbitrary supplied SVG/HTML/images and existing saved templates still
+require review: schema validation cannot prove their factual accuracy.
+
 ## Authentication
 
 There are exactly two ways to authenticate. Every setup below uses one of them:
@@ -161,6 +228,7 @@ described above:
 
 | Tool                                                                                            | Description                                                                                                                                                                                                                                                                                 |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build_data_visual` | Build a bar chart, numeric-x line chart, percentage progress bar or directed diagram from supplied data and source details. Returns calculated SVG geometry, or omits the visual when inputs or layout are insufficient. Free; no persistence or rendering. |
 | `plan_creative_video`                                                                           | Plan-aware storyboard and art direction from a brief — plus `libraryCandidates`: published examples ranked against the brief with an adapt-vs-assemble decision. Supports `consistent`, `fresh`, and `explore` modes, recent-asset exclusions, brand tokens, style packs, and scene recipes |
 | `find_matching_examples`                                                                        | Rank the entire published examples library against a brief (category synonyms, aspect/duration fit) and return candidates with thumbnails plus a decision: `adapt-example`, `adapt-or-assemble`, or `assemble-similar` (with design-template/canvas-preset/shape modules)                   |
 | `start_from_example`                                                                            | Fetch an example's render-ready project JSON plus an adaptation map (variables, text/media slots, scene summary, fonts) and the adaptation contract — the premium path: keep the layout, swap copy/media/brand. Suggests free alternatives when a premium example is plan-locked            |

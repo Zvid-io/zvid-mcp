@@ -1351,6 +1351,7 @@ export const AUTHORING_GUIDELINES: string[] = [
   "TYPE SCALE: headline ≈ canvasHeight/9 px (e.g. 80px on 720p), subline ≈ half that, CTA label 28–36px. Keep any text block ≤ 80% of canvas width and ≤ 2 text elements visible at the same moment.",
   "SAFE TIMING: give enter animations 0.4–0.7s (enterEnd - enterBegin) and leave the last 0.5s of a scene animation-free so transitions don't fight element exits.",
   'FONTS: fontFamily loads from Google Fonts (default "Poppins"). Stick to 1–2 families per video; set the family on every text element for consistency.',
+  "When resizing library artwork, use whole-pixel width/height for elements with enter/exit animations. Fractional dimensions can produce mismatched raster frames and fail encoding. Round the element box only; preserve chart SVG geometry and data.",
   "validateProject() lints these rules and returns layout warnings (overlaps, ignored x/y, off-canvas boxes, padding traps, low contrast) — treat every layout warning as a fix-before-render item.",
 ];
 
@@ -4256,6 +4257,19 @@ function lintContainer(
   for (const e of entries) {
     const { v, field } = e;
     const pos = typeof v.position === "string" ? v.position : undefined;
+
+    if (v.enterAnimation || v.exitAnimation) {
+      for (const dimension of ["width", "height"]) {
+        if (isNum(v[dimension]) && !Number.isInteger(v[dimension])) {
+          warn(
+            ctx,
+            `${field}.${dimension}`,
+            `${field}.${dimension} is fractional on an animated element. Round its box dimension to a whole pixel to avoid mismatched animation frames and an encoding failure; keep SVG geometry unchanged.`,
+          );
+        }
+      }
+    }
+
 
     if ((v.x !== undefined || v.y !== undefined) && pos && pos !== "custom") {
       warn(

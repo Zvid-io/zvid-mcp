@@ -22,6 +22,12 @@ import crypto from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  buildDataVisual,
+  dataVisualInputShape,
+  DATA_VISUAL_GUIDELINES,
+  libraryVisualIssue,
+} from "./dataVisuals.js";
+import {
   registerAgentFacade,
   registerAgentResourcesAndPrompts,
 } from "./agentFacade.js";
@@ -293,6 +299,7 @@ interface LibraryDiscoveryResult {
     shapes: Record<string, unknown>[];
   };
   adaptationContract: string[];
+  dataVisualGuidelines: string[];
   nextSteps: string[];
 }
 
@@ -364,9 +371,10 @@ async function discoverLibraryCandidates(
   const listing = (await client.get("/api/library/examples")) as {
     items?: unknown;
   };
-  const pool = Array.isArray(listing?.items)
+  const allItems = Array.isArray(listing?.items)
     ? (listing.items as LibraryListItem[])
     : [];
+  const pool = allItems.filter((item) => !libraryVisualIssue(item));
 
   let examples = scoreLibraryCandidates(pool, {
     brief: opts.brief,
@@ -448,6 +456,7 @@ async function discoverLibraryCandidates(
     examples,
     adaptationContract: ADAPTATION_CONTRACT,
     nextSteps,
+    dataVisualGuidelines: DATA_VISUAL_GUIDELINES,
   };
 
   if (examples.some((candidate) => candidate.premium)) {
@@ -504,9 +513,10 @@ For a quick "make something like X" without a full plan, call find_matching_exam
 
 function instructionsForProfile(profile: ToolProfile): string {
   if (profile === "readonly") return READONLY_INSTRUCTIONS;
-  return profile === "automation" || profile === "developer"
+  const workflow = profile === "automation" || profile === "developer"
     ? `${CREATOR_INSTRUCTIONS}\n\n${DEVELOPER_INSTRUCTIONS}`
     : CREATOR_INSTRUCTIONS;
+  return `${DATA_VISUAL_GUIDELINES.join("\n")}\n\n${workflow}`;
 }
 
 function inferredAnnotations(name: string) {
@@ -684,6 +694,17 @@ export function createZvidServer({
   // Backend wins over public docs when they disagree.
 
   server.registerTool(
+    "build_data_visual",
+    {
+      title: "Build a meaningful chart or diagram",
+      description: "Build a deterministic bar chart, numeric-x line chart, percentage progress bar, or small directed acyclic diagram from supplied data and provenance. For progress use kind progress, unit %, and values 0–100: the label and fill come from the same value on a fixed 0–100% track. Free and local: no saves, renders or credits. Returns ordinary SVG project JSON plus calculated geometry, or status omitted with no visual when meaning, data or readable layout is insufficient. Never fabricate values/relationships. Illustrative data requires an explicit user request. Static output: rebuild it whenever template data changes; do not swap labels alone.",
+      inputSchema: dataVisualInputShape,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    handler(async (args) => buildDataVisual(args)),
+  );
+
+  server.registerTool(
     "get_project_schema",
     {
       title: "Get project JSON Schema",
@@ -698,8 +719,8 @@ export function createZvidServer({
           ),
       },
     },
-    handler(async ({ target }) =>
-      liveAuthoringOrFallback(
+    handler(async ({ target }) => ({
+      ...await liveAuthoringOrFallback<Record<string, unknown>>(
         () =>
           client.get("/api/render/schema/api-key", {
             target: target ?? "project",
@@ -724,7 +745,8 @@ export function createZvidServer({
           };
         },
       ),
-    ),
+      dataVisualGuidelines: DATA_VISUAL_GUIDELINES,
+    })),
   );
 
   server.registerTool(
@@ -764,6 +786,7 @@ export function createZvidServer({
         errors: local.errors,
         warnings: local.warnings,
         validatedBy: "local schema (mirrors backend validation)",
+        dataVisualNotice: "Schema validation does not verify chart geometry, data sources or diagram relationships. Use build_data_visual with supplied evidence; omit ungrounded visuals.",
       };
 
       if (remote) {
@@ -996,7 +1019,7 @@ export function createZvidServer({
         note: "Creative-library lookup failed — search_creative_library manually and adapt an example before composing from scratch.",
       }));
 
-      return { ...plan, libraryCandidates };
+      return { ...plan, libraryCandidates, dataVisualGuidelines: DATA_VISUAL_GUIDELINES };
     }),
   );
 
@@ -1108,6 +1131,11 @@ export function createZvidServer({
     handler(async ({ slug, variables, overrides, name }) => {
       const base = `/api/library/examples/${encodeURIComponent(slug)}`;
       const item = await client.get(base);
+      const visualIssue = libraryVisualIssue(item);
+      if (visualIssue) return {
+        rendered: false, slug,
+        message: `${visualIssue} Rebuild the visual with build_data_visual using actual data/relationships and source, or omit it before rendering.`,
+      };
       let payload: Record<string, unknown>;
       try {
         payload = (await client.getRedirectedJson(`${base}/content`)) as Record<
@@ -1241,6 +1269,12 @@ export function createZvidServer({
     handler(async ({ slug }) => {
       const base = `/api/library/examples/${encodeURIComponent(slug)}`;
       const item = await client.get(base);
+      const visualIssue = libraryVisualIssue(item);
+      if (visualIssue) return {
+        status: "omitted", slug, item,
+        message: `${visualIssue} Use build_data_visual with actual data/relationships and provenance, or omit the visual.`,
+        dataVisualGuidelines: DATA_VISUAL_GUIDELINES,
+      };
       let payload: Record<string, unknown>;
       try {
         payload = (await client.getRedirectedJson(`${base}/content`)) as Record<

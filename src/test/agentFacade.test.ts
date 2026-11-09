@@ -192,6 +192,79 @@ test("create_media saves a validated draft and render_media spends only the sign
   assert.deepEqual(renderCall?.body.payload, IMAGE_PAYLOAD);
 });
 
+test("new draft quotes include duration added by project persistence", async () => {
+  const payload = {
+    name: "Duration normalization",
+    type: "video",
+    width: 1280,
+    height: 720,
+    frameRate: 30,
+    outputFormat: "mp4",
+    scenes: [{ duration: 3, visuals: IMAGE_PAYLOAD.visuals }],
+  };
+  let stored: Record<string, unknown> = payload;
+  let renderCount = 0;
+  const client = await creatorClient((async (input, init) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    const respond = (value: unknown) =>
+      new Response(JSON.stringify(value), {
+        headers: { "Content-Type": "application/json" },
+      });
+    if (url.pathname === "/api/render/validate/api-key") {
+      return respond({
+        valid: true,
+        creditsRequired: 3,
+        payload: body.payload,
+      });
+    }
+    if (url.pathname === "/api/projects") {
+      stored = { ...body.payload, duration: 3 };
+      return respond({
+        project: { id: DRAFT_ID, name: body.name, payload: stored, version: 1 },
+      });
+    }
+    if (url.pathname === `/api/projects/${DRAFT_ID}`) {
+      return respond({
+        project: { id: DRAFT_ID, payload: stored, version: 1 },
+      });
+    }
+    if (url.pathname === "/api/render/api-key") {
+      renderCount++;
+      assert.equal(body.payload.duration, 3);
+      return respond({ jobId: body.jobId, status: "queued" });
+    }
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  }) as typeof fetch);
+  try {
+    const created = firstJson(
+      await client.callTool({
+        name: "create_media",
+        arguments: {
+          brief: "Create a three-second title card",
+          payload,
+        },
+      }),
+    );
+    const rendered = await client.callTool({
+      name: "render_media",
+      arguments: {
+        draftId: created.draftId,
+        quoteToken: created.quoteToken,
+      },
+    });
+    assert.equal(rendered.isError, undefined);
+    assert.ok(firstJson(rendered).jobId);
+    assert.equal(
+      renderCount,
+      1,
+      "the original quote must work without get_media",
+    );
+  } finally {
+    await client.close();
+  }
+});
+
 test("render_media rejects a tampered quote before calling the render API", async () => {
   const paths: string[] = [];
   const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
@@ -437,7 +510,66 @@ test("create_media composes from a brief through MCP sampling when supported", a
   );
   assert.equal(created.composition, "sampling");
   assert.match(sampledPrompt, /analytics product/);
+  assert.match(sampledPrompt, /Never invent values/);
   assert.equal(created.draftId, DRAFT_ID);
+});
+
+test("automatic drafts and templates never copy a library chart's sample data", async () => {
+  let contentReads = 0;
+  const client = await creatorClient((async (
+    input: URL | RequestInfo,
+    init?: RequestInit,
+  ) => {
+    const url = new URL(String(input));
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    if (url.pathname.endsWith("/content")) {
+      contentReads++;
+      return Response.json(IMAGE_PAYLOAD);
+    }
+    if (url.pathname === "/api/library/examples")
+      return Response.json({
+        items: [
+          {
+            slug: "survey-chart",
+            title: "Survey chart",
+            meta: { chartMode: "data-bound", type: "image" },
+          },
+        ],
+      });
+    if (url.pathname === "/api/render/creative-plan/api-key")
+      return Response.json({ directions: [] });
+    if (url.pathname === "/api/render/validate/api-key")
+      return Response.json({
+        valid: true,
+        creditsRequired: 1,
+        payload: body.payload,
+      });
+    if (url.pathname === "/api/projects")
+      return Response.json({
+        project: { id: DRAFT_ID, payload: body.payload, version: 1 },
+      });
+    if (url.pathname === "/api/templates")
+      return Response.json({
+        template: { id: "tpl_00000000000000000000", project: body.payload },
+      });
+    return Response.json({}, { status: 404 });
+  }) as typeof fetch);
+  for (const name of ["create_media", "create_media_template"]) {
+    const body = firstJson(
+      await client.callTool({
+        name,
+        arguments: { brief: "Create a survey chart", type: "image" },
+      }),
+    );
+    assert.equal(
+      body.composition,
+      "deterministic-fallback",
+      JSON.stringify(body),
+    );
+    assert.match(body.qualityNotice, /Charts and diagrams are omitted/);
+  }
+  assert.equal(contentReads, 0);
+  await client.close();
 });
 
 test("brief-only creation falls back safely when the MCP client lacks sampling", async () => {
@@ -541,7 +673,11 @@ test("create_media_from_example resolves variables server-side into a quoted dra
       return Response.json(TEMPLATE_CONTENT);
     }
     if (url.pathname === "/api/library/examples/flash-demo") {
-      return Response.json({ slug: "flash-demo", title: "Flash Demo", meta: {} });
+      return Response.json({
+        slug: "flash-demo",
+        title: "Flash Demo",
+        meta: {},
+      });
     }
     if (url.pathname === "/api/templates" && init?.method === "POST") {
       return Response.json({ template: { id: "tpl_123" } }, { status: 201 });
@@ -549,7 +685,10 @@ test("create_media_from_example resolves variables server-side into a quoted dra
     if (url.pathname === "/api/templates/tpl_123/preview") {
       return Response.json({ project: RESOLVED_PAYLOAD, stats: {} });
     }
-    if (url.pathname === "/api/templates/tpl_123" && init?.method === "DELETE") {
+    if (
+      url.pathname === "/api/templates/tpl_123" &&
+      init?.method === "DELETE"
+    ) {
       return Response.json({ archived: true });
     }
     if (url.pathname === "/api/render/validate/api-key") {
@@ -648,7 +787,12 @@ test("brief-only creation without sampling adapts the closest example instead of
             slug: "ecom-hero-promo",
             title: "Product Hero Promo",
             description: "Hero product promo for online stores",
-            meta: { pack: "ecommerce", resolution: "hd", duration: 30, scenes: 3 },
+            meta: {
+              pack: "ecommerce",
+              resolution: "hd",
+              duration: 30,
+              scenes: 3,
+            },
           },
         ],
       });
@@ -930,7 +1074,10 @@ test("create_media_template composes via sampling and corrects a variable-free f
   const created = firstJson(
     await client.callTool({
       name: "create_media_template",
-      arguments: { brief: "Promo template for adult male shoes", type: "video" },
+      arguments: {
+        brief: "Promo template for adult male shoes",
+        type: "video",
+      },
     }),
   );
 
@@ -1011,7 +1158,10 @@ test("create_media_template without sampling falls back to a parameterized deter
   for (const name of ["brandName", "headline", "message", "ctaText"]) {
     assert.ok(name in savedVariables, `fallback must declare ${name}`);
   }
-  assert.match(JSON.stringify(saveCall?.body.payload.scenes), /\{\{headline\}\}/);
+  assert.match(
+    JSON.stringify(saveCall?.body.payload.scenes),
+    /\{\{headline\}\}/,
+  );
   assert.ok(
     Array.isArray(created.declaredVariables) &&
       created.declaredVariables.some((v: any) => v.name === "headline"),
@@ -1038,7 +1188,12 @@ test("create_media_template without sampling adopts a variable-bearing library e
             slug: "shoes-promo-vertical",
             title: "Shoes Promo Vertical",
             description: "Vertical promo template for shoes and sneakers",
-            meta: { pack: "ecommerce", resolution: "hd", duration: 8, scenes: 2 },
+            meta: {
+              pack: "ecommerce",
+              resolution: "hd",
+              duration: 8,
+              scenes: 2,
+            },
           },
         ],
       });

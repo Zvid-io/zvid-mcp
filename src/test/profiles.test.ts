@@ -16,6 +16,7 @@ test("creator profile exposes the promoted quality authoring toolset", () => {
     "revise_media",
     "render_media",
     "plan_creative_video",
+    "build_data_visual",
     "find_matching_examples",
     "start_from_example",
     "search_creative_library",
